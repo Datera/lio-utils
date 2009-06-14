@@ -1,0 +1,11 @@
+# A trivial net-snmp agent configuration for testing only
+syslocation	Server Room
+syscontact	Sysadmin (root@localhost)
+rocommunity	public
+trapcommunity	public
+#rwcommunity	secret
+
+trapsink	localhost
+
+# Combined MIB Module for iSCSI Target
+dlmod iscsiTargetMib /usr/lib/snmp/dlmod/iscsiTargetMib.so

@@ -1,0 +1,341 @@
+#!/bin/bash
+#
+# Filename:  /etc/rc.d/init.d/target
+# target:	Bring up/down target_core_mod and iscsi_target_mod v3.0
+#
+# Bring up/down iscsi target networking
+#
+# chkconfig: 2345 18 01
+# description:	Target_Core_Mod + LIO-target + ConfigFS v3.x
+# config: /etc/sysconfig/target
+#
+#########################################################################
+#
+
+### BEGIN INIT INFO
+# Provides: $target
+### END INIT INFO
+
+# Source function library.
+#. /etc/init.d/functions
+
+#########################################################################
+# Our product file definitions
+
+MODNAME="target_core_mod"
+
+TCM_CFS_DIR="/sys/kernel/config/target/core"
+LIO_CFS_DIR="/sys/kernel/config/target/iscsi"
+FILE_TCFG="/etc/sysconfig/target"
+LOCK_TARGET="/var/lock/subsys/target"
+LOG_EVENT="/var/log/iscsi/target.log"
+TCM_NODE="/usr/sbin/tcm_node"
+LIO_NODE="/usr/sbin/lio_node"
+SEMA_TARGET="/var/crash/target.fault"
+TCM_CONFIGFS_SCRIPT="/etc/target/tcm_start.sh"
+LIO_CONFIGFS_SCRIPT="/etc/target/lio_start.sh"
+
+#########################################################################
+# Allows saving command & arguments into a file for subsequent debugging
+# Enable: Set DEBUG=1    Disable: Set DEBUG=0
+
+DEBUG=0
+LOGFILE=/tmp/tgtctl.dbug
+
+if [ $DEBUG ]; then
+	echo "$0 $*" >> $LOGFILE
+fi
+#########################################################################
+
+if [ ! -f ${TCM_NODE} ]; then
+	echo "${TCM_NODE} does not exist" 
+	exit 1
+fi
+
+if [ ! -f ${LIO_NODE} ]; then
+	echo "${LIO_NODE} does not exist" 
+	exit 1
+fi
+
+if [ ! -d /var/crash ]; then
+	mkdir /var/crash
+fi
+
+if [ ! -d /var/lock/subsys ]; then
+	mkdir -p /var/lock/subsys
+fi
+
+cd /	    # to avoid making the CWD unmountable
+
+#########################################################################
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:$PATH"
+RETVAL=0
+
+function run_lio_target_cfs_ops() {
+	if [ ! -f ${LIO_CONFIGFS_SCRIPT} ]; then
+		echo "ELIOR - Cannot find ${LIO_CONFIGFS_SCRIPT} "
+		exit 1
+	fi	
+
+	echo -n $"Calling ConfigFS script for iscsi_target_mod: "
+	if [ -f $LIO_CONFIGFS_SCRIPT ]; then
+		sh ${LIO_CONFIGFS_SCRIPT} > /dev/null 2>&1
+		RET=$?
+		if [ $RET == 0 ]; then
+			echo "  [OK]"
+		else
+			echo "  [FAILED]"
+		fi
+	fi
+}
+
+function run_tcm_cfs_ops() {
+	if [ ! -f ${TCM_CONFIGFS_SCRIPT} ]; then
+		echo "ERROR - Cannot find ${TCM_CONFIGFS_SCRIPT} "
+		exit 1
+	fi
+
+	echo -n $"Calling ConfigFS script for target_core_mod: "
+	if [ -f $TCM_CONFIGFS_SCRIPT ]; then
+		sh ${TCM_CONFIGFS_SCRIPT} > /dev/null 2>&1
+		RET=$?
+		if [ $RET == 0 ]; then
+			echo "  [OK]"
+		else
+			echo "  [FAILED]"
+		fi
+	fi
+
+	run_lio_target_cfs_ops
+}
+
+function load_scsi_disk() {
+	if test "x`grep "sd" /proc/devices | awk '{ if ($2 == "sd") print "sd" }'`" != x ; then
+		:
+	else
+		echo -n $"Loading SCSI Disk: "
+		modprobe -q sd_mod
+		if lsmod | grep -q "^sd_mod" ; then
+			echo "  [OK]"
+		else
+			echo -n $"SCSI Core ERROR, abort iSCSI Target Stack: "
+			echo "error"
+			exit 1
+		fi
+	fi
+}
+
+function unload_lio_mode() {
+	echo -n $"Unload Linux-iSCSI.org Fabric module"
+	rmmod iscsi_target_mod
+	RETVAL=$?
+	if [ $RETVAL == 0 ]; then
+		echo "  [OK]"
+	else
+		echo "  [FAILED]: $RETVAL"
+	fi
+}
+
+function load_tcm_mod() {
+	echo -n $"Loading target_core_mod/ConfigFS core: "
+	modprobe -q ${MODNAME} > /dev/null
+	RETVAL=$?
+	if [ $RETVAL == 0 ]; then
+		echo "  [OK]"
+	else
+		echo "  [FAILED]: $RETVAL"
+	fi
+}
+
+function shutdown_lio_mod () {
+	echo -n $"Shutting down LIO-Target/ConfigS"
+	${LIO_NODE} --unload
+        RETVAL=$?
+        if [ $RETVAL == 0 ]; then
+                echo "  [OK]"
+        else
+                echo "  [FAILED]: $RETVAL"
+        fi
+}
+
+function unload_tcm_mod() {
+	
+	shutdown_lio_mod
+
+	echo -n $"Unloading target_core_mod/ConfigFS core: "
+	$TCM_NODE --unload
+	RETVAL=$?
+	if [ $RETVAL == 0 ]; then
+		echo "  [OK]"
+		return 0
+	else
+		echo "  [FAILED]: $RETVAL"
+		return 1
+	fi
+}
+
+start () {
+	if [ -d ${TCM_CFS_DIR} ]; then
+		echo -n $"Calling START $0 "
+		RETVAL=1
+		echo "ERROR, target_core_mod/ConfigFS already active"
+		return $RETVAL
+	fi
+	if test "x `lsmod | grep ${MODNAME} | awk '{ if ($$1 == "${MODNAME}") print $$1 }'`" == x ; then
+		echo -n $"Calling START $0 "
+		RETVAL=1
+		echo "ERROR, target_core_mod/ConfigFS already active"
+		return $RETVAL
+	else
+		if [ -e ${LOCK_TARGET} ]; then
+			rm -f ${LOCK_TARGET}
+		fi
+	fi
+
+# Prevent multiple driver panics from hanging system (probably via scsi or target driver).
+# HINT: Most likely cause is a problem within '/etc/iscsi/install.target'.
+# Save a backup of the file, then NULL'd it to troubleshoot this variant.
+	if [ -e ${SEMA_TARGET} ]; then
+		RETVAL=1
+		echo "See ${SEMA_TARGET}"
+		return $RETVAL
+	fi
+
+# Put message in semaphore file to aid in troubleshooting should
+# the file still exist during a subsequent boot.
+	echo "$0: Created: " `date` > ${SEMA_TARGET}
+	echo "$0: " >> ${SEMA_TARGET}
+	echo "$0: This file has been created as a result of a potentially" >> ${SEMA_TARGET}
+	echo "$0: recursive module startup problem.  Probable cause is an" >> ${SEMA_TARGET}
+	echo "$0: iSCSI device configuration problem which finds its way" >> ${SEMA_TARGET}
+	echo "$0: catastrophically into the Target Core Stack." >> ${SEMA_TARGET}
+	echo "$0: " >> ${SEMA_TARGET}
+	echo "$0: You must remove /var/crash/target.fault before attempting" >> ${SEMA_TARGET}
+	echo "$0: to start again." >> ${SEMA_TARGET}
+	echo "$0: " >> ${SEMA_TARGET}
+	echo "$0: Continued startup problems might be researched by saving" >> ${SEMA_TARGET}
+	echo "$0: off the current /etc/iscsi/install.target file and then" >> ${SEMA_TARGET}
+	echo "$0: replacing it with a dummy file which contains no entries." >> ${SEMA_TARGET}
+	echo "$0: If bootup is then successful, contact the iSCSI Target" >> ${SEMA_TARGET}
+	echo "$0: Stack manufacturer for assistance with problems within" >> ${SEMA_TARGET}
+	echo "$0: the target configuration file." >> ${SEMA_TARGET}
+	sync ; sync
+
+#	load_scsi_disk
+
+	if [ -e ${LOCK_TARGET} ]; then
+		rm -f ${SEMA_TARGET}
+		echo -n $"Calling START $0 "
+		RETVAL=1
+		echo "ERROR, target_core_mod already active"
+		return $RETVAL
+	fi
+
+	load_tcm_mod
+	if [ $RETVAL != 0 ]; then
+		rm -f ${SEMA_TARGET}
+		return $RETVAL
+	fi
+
+	sleep 1
+	
+	${PGM_SET_TNAME}
+	RETVAL=$?
+	if [ $RETVAL == 2 ]; then
+		rm -f ${SEMA_TARGET}
+		unload_tcm_mod
+		return $RETVAL
+	fi
+
+	run_tcm_cfs_ops
+
+	touch ${LOCK_TARGET}
+	rm -f ${SEMA_TARGET}
+
+	return $RETVAL
+}
+
+stop () {
+	rm -f ${SEMA_TARGET}
+
+	unload_tcm_mod
+	RET=$?
+	if [ $RET != 0 ]; then
+		return 1
+	fi
+	sleep 1
+
+	rm -f ${LOCK_TARGET}
+	echo "Successfully unloaded target_core_mod/ConfigFS core"
+	return $RET
+}
+
+function lio_version () {
+	if [ ! -d ${LIO_CFS_DIR} ]; then
+		exit 1
+	fi
+
+	lio_node --version
+}
+
+function lio_status () {
+	if [ ! -d ${LIO_CFS_DIR} ]; then
+		exit 1
+	fi
+
+	lio_node --listendpoints
+}
+
+function tcm_version () {
+	if [ ! -d ${TCM_CFS_DIR} ]; then
+		exit 1
+	fi
+
+	tcm_node --version
+}
+
+function tcm_status () {
+	if [ ! -d ${TCM_CFS_DIR} ]; then
+		exit 1
+	fi
+
+	echo "[---------------------------] TCM/ConfigFS Status [----------------------------]"
+	tcm_node --listhbas
+
+	echo ""
+	echo "[---------------------------] LIO-Target Status [----------------------------]"
+	lio_status
+
+	echo ""
+	tcm_version
+	lio_version
+}
+
+restart () {
+	stop $1
+	start $1
+	RETVAL=$?
+}
+
+case "$1" in
+	start)
+		start 1
+		;;
+	stop)
+		stop 1
+		;;
+	status)
+		tcm_status
+		RETVAL=$?
+		;;
+	restart|reload)
+		restart 1
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|status|restart}"
+		exit 1
+esac
+
+exit $?
+

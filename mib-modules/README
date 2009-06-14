@@ -1,0 +1,152 @@
+iSCSI Target MIB Support:
+
+Net-SNMP is an SNMP Agent and a collection of SNMP applications available with
+all Linux distributions. MIB support for the v3.0 Target_Core_Mod SCSI target and
+v3.0 Linux-iSCSI.org Target fabric module is provided using dynamic load module
+(dlmod) functionality of the Net-SNMP Agent.
+
+See www.net-snmp.org and man pages for info on Net-SNMP.
+
+Net-SNMP Support:
+	The Linux OS distributions supported by the TCM-SCSI and LIO-iSCSI target
+	stack come with various versions of Net-SNMP ranging from 5.0.9 to 5.1.3.1. 
+	The iscsiTargetMib module is built for the native version of Net-SNMP
+	of each Linux distribution. However, the iscsiTargetMib module built 
+	for net-snmp-5.1 and higher are upward compatible with newer versions 
+	of Net-SNMP. The iscsiTargetMib module built for net-snmp-5.0.9 is not 
+	upward compatible.
+
+	SNMP Versions supported: v1, v2c and v3
+
+MIB Support: 
+	The following standard MIBs are supported:
+
+	MIB Files		IETF Drafts			Level of Support
+	------------------------------------------------------------------------
+	LIO-ISCSI-MIB.txt	draft-ietf-ips-iscsi-mib-11.txt	Full support
+	LIO-IPS-AUTH-MIB.txt	draft-ietf-ips-auth-mib-08.txt	Partial support
+	LIO-SCSI-MIB.txt	RFC 4455			Partial support
+
+	a) LIO-ISCSI-MIB:
+
+	Tables Supported:
+	iscsiInstanceAttributesTable
+	iscsiInstanceSsnErrorStatsTable
+	iscsiPortalAttributesTable
+	iscsiTgtPortalAttributesTable
+	iscsiNodeAttributesTable
+	iscsiTargetAttributesTable
+	iscsiTargetLoginStatsTable
+	iscsiTargetLogoutStatsTable
+	iscsiTgtAuthAttributesTable
+	iscsiSessionAttributesTable
+	iscsiSessionStatsTable
+	iscsiSessionCxnErrorStatsTable
+	iscsiConnectionAttributesTable
+
+	Traps/Notifications supported:
+	iscsiTgtLoginFailure
+	iscsiInstSessionFailure
+
+	b) LIO-SCSI-MIB:
+
+	Tables Supported:
+	scsiInstanceTable
+	scsiDeviceTable
+	scsiPortTable
+	scsiTransportTable
+	scsiTgtDevTable
+	scsiTgtPortTable
+	scsiAuthorizedIntrTable
+	scsiAttIntrPortTable
+	scsiLuTable
+
+	Traps/Notifications supported:
+	scsiTgtDeviceStatusChanged
+
+	Note: This trap is generated based on the software status maintained
+	by the iSCSI stack and mapped to scsiTgtDeviceStatus as follows:
+	available:	Device is assigned to target portal group
+	abnormal:	Device is deactivated, shutdown or offline
+	unknown:	Software status could not be mapped
+
+	c) LIO-IPS-AUTH-MIB:
+
+	Tables Supported:
+	ipsAuthInstanceAttributesTable
+	ipsAuthIdentAttributesTable
+	ipsAuthIdentNameAttributesTable
+	ipsAuthCredentialAttributesTable
+	ipsAuthCredChapAttributesTable
+
+	Notes:
+	1. Initiator MIBs are not supported.
+	2. Writes(SETs) are not supported. They are not required for standard
+	   compliance.
+	3. All MIBs are placed under LIO's private branch instead of mib-2
+	   branch because the top level OIDs for ISCSI MIB and IPS AUTH MIB
+	   have not been assigned by IANA yet.  FIXME --nab
+ 
+Installation of Target MIB module and MIB files:
+
+	The Target MIB module and the MIB files are included in the sbe-mibs 
+	rpm and installed in the following location as part of the Target 
+	installation:
+
+	Target MIB module (iscsiTargetMib.so):
+		/usr/lib/snmp/dlmod
+
+	Target MIB files (LIO-IPS-AUTH-MIB.txt, LIO-ISCSI-MIB.txt, 
+	                  LIO-SCSI-MIB.txt):
+		/usr/share/snmp/mibs/
+
+	Config changes required for loading the target MIB module are also made
+	to the Net-SNMP config file as part of the installation.
+
+	Location of the config files:
+
+	RedHat, CentOS, FC:	/etc/snmpd/snmpd.conf
+
+	SUSE:			/etc/snmpd.conf
+
+Starting the Net-SNMP agent:
+
+	> /etc/init.d/snmpd start
+
+	Check /var/log/snmpd.log to see whether loading of the target mib 
+	module was successful. You should see the following messages:
+
+	NET-SNMP version 5.1.2
+	Linux-iSCSI.org Target Mib Module version 0.0.2
+
+	If you don't see the following messages, check the Net-SNMP agent
+	configure file to ensure that the following line has been added by
+	the installation process:
+
+	dlmod iscsiTargetMib /usr/local/lib/snmp/dlmod/iscsiTargetMib.so
+
+Testing:
+
+	The Net-SNMP includes several applications which may be used for 
+	testing the target mib support. A couple of them are listed below.
+	See the man pages for snmpcmd, snmpget, snmpgetnext, snmpwalk, 
+	snmptrapd, etc. for more information.
+
+	Note: Add the following shell variables to your environment for the
+	Net-SNMP applications to decode the MIB OIDs.
+
+	MIBDIRS=/usr/share/snmp/mibs
+	MIBS=ALL
+
+	Alternatively, add these variables to the snmp.conf file. See the 
+	man page for snmp.conf.
+
+	List all iSCSI related MIB objects:
+	> snmpwalk -v1 -c public localhost sbe
+
+	Receive Traps and display them:
+	> snmptrapd -f 
+
+	Use the Net-SNMP applications and/or an SNMP manager to retrieve each 
+	object supported by the Target and ensure that the values returned by
+	the agent are correct.
