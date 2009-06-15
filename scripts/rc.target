@@ -130,7 +130,7 @@ function check_configfs_mount() {
 	if [ ! -d /sys/kernel/config ]; then
 		modprobe configfs
 		mount -t configfs configfs /sys/kernel/config
-		echo "RET: $RET"
+		RET=$?
 		if [ $RET != 0 ]; then
 			echo "ERROR: Unable to mount configfs on /sys/kernel/config"
 			return 1
