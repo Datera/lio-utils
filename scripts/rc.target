@@ -126,6 +126,18 @@ function load_scsi_disk() {
 	fi
 }
 
+function check_configfs_mount() {
+	if [ ! -d /sys/kernel/config ]; then
+		modprobe configfs
+		mount -t configfs configfs /sys/kernel/config
+		echo "RET: $RET"
+		if [ $RET != 0 ]; then
+			echo "ERROR: Unable to mount configfs on /sys/kernel/config"
+			return 1
+		fi
+	fi
+}
+
 function unload_lio_mode() {
 	echo -n $"Unload Linux-iSCSI.org Fabric module"
 	rmmod iscsi_target_mod
@@ -138,6 +150,12 @@ function unload_lio_mode() {
 }
 
 function load_tcm_mod() {
+	check_configfs_mount
+	RETVAL=$?
+	if [ $RETVAL != 0 ]; then
+		return 1
+	fi
+
 	echo -n $"Loading target_core_mod/ConfigFS core: "
 	modprobe -q ${MODNAME} > /dev/null
 	RETVAL=$?
@@ -146,6 +164,8 @@ function load_tcm_mod() {
 	else
 		echo "  [FAILED]: $RETVAL"
 	fi
+
+	return 0
 }
 
 function shutdown_lio_mod () {
