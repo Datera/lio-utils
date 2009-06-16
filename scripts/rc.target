@@ -92,7 +92,6 @@ function run_lio_target_cfs_ops() {
 
 function run_tcm_cfs_ops() {
 	if [ ! -f ${TCM_CONFIGFS_SCRIPT} ]; then
-		echo "ERROR - Cannot find ${TCM_CONFIGFS_SCRIPT} "
 		exit 1
 	fi
 
