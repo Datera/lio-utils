@@ -156,6 +156,21 @@ def lio_target_tpg_disableauth(option, opt_str, value, parser):
 
 	return
 
+def lio_target_disable_lunwp(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	initiator_iqn = str(value[2]);
+	mapped_lun = str(value[3]);
+
+	disable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/write_protect"
+	ret = os.system(disable_op)
+	if ret:
+		print "Unable to disable WriteProtect for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
+	else:
+		print "Successfully disabled WRITE PROTECT for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
+
+	return
+
 def lio_target_tpg_demomode(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
@@ -166,6 +181,21 @@ def lio_target_tpg_demomode(option, opt_str, value, parser):
 		print "Unable to enable DemoMode on iSCSI Target Portal Group: " + iqn + " " + tpgt
 	else:
 		print "Successfully enabled DemoMode on iSCSI Target Portal Group: " + iqn + " " + tpgt
+
+	return
+
+def lio_target_enable_lunwp(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	initiator_iqn = str(value[2]);
+	mapped_lun = str(value[3]);
+
+	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/write_protect"
+	ret = os.system(enable_op)
+	if ret:
+		print "Unable to enable WriteProtect for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
+	else:
+		print "Successfully enabled WRITE PROTECT for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
 
 	return
 
@@ -333,6 +363,16 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 			print "        \-------> " + tpg + "  TargetAlias: " + value.rstrip()
 			os.close(p)
 
+			print "         TPG Status:",
+			p = os.open(tpg_root + "/" + tpg + "/enable", 0)
+			value = os.read(p, 8)
+			enable_bit = value.rstrip();
+			if enable_bit == '1':
+				print "ENABLED"
+			else:
+				print "DISABLED"
+			os.close(p)
+
 			print "         TPG Network Portals:"
 			np_root = tpg_root + "/" + tpg + "/np"
 			for np in os.listdir(np_root):
@@ -348,8 +388,44 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 					
 					port_link = port_dir + "/" + port
 					sourcelink = os.readlink(port_link)
+					# Skip over ../../../../../ in sourcelink"		
+					print "                 \-------> " + lun + "/" + port + " -> " + sourcelink[18:]
 					
-					print "                 \-------> " + lun + "/" + port + " -> " + sourcelink
+
+	return
+
+def lio_target_list_lunacls(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+
+	iqn_root = os.listdir(lio_root)
+
+	nacl_root_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls"
+	nacl_root = os.listdir(nacl_root_dir)
+	for nacl in nacl_root:
+		print "\------> InitiatorName ACL: " + nacl
+		print "         Logical Unit ACLs: "
+		lun_root_dir = nacl_root_dir + "/" + nacl
+		lun_root = os.listdir(lun_root_dir)
+		for lun in lun_root:
+			ret = re.search('lun_', lun)
+			if not ret:
+				continue
+
+			wp_attrib = lun_root_dir + "/" + lun + "/write_protect"
+			wp_file = open(wp_attrib);
+			line = wp_file.readline()
+			wp_bit = line.rstrip()
+			if wp_bit == '1':
+				wp_info = "ENABLED"
+			else:
+				wp_info = "DISABLED"
+			
+			lun_link = lun_root_dir + "/" + lun + "/" + lun
+			sourcelink = os.readlink(lun_link)
+			 # Skip over ../../../../../../ in sourcelink"
+			print "         \-------> " + lun + " -> " + sourcelink[21:]
+			print "                   \-------> Write Protect for " + lun + ": " + wp_info
 
 	return
 
@@ -359,10 +435,24 @@ def lio_target_list_nodeacls(option, opt_str, value, parser):
 
 	iqn_root = os.listdir(lio_root)
 	
-	nacl_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls")
+	nacl_root_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls"
+	nacl_root = os.listdir(nacl_root_dir)
 	for nacl in nacl_root:
-		print nacl				
+		print "\------> InitiatorName: " + nacl
+		info_attrib = nacl_root_dir + "/" + nacl + "/info"
+		file = open(info_attrib, "r")
+		line = file.readline()
+		ret = re.search('No active iSCSI Session for Initiator Endpoint', line)
+		if ret:	
+			print "         No active iSCSI Session for Initiator Endpoint"
+		else:	
+			line = file.readline()
+			while line:
+				print "         " + line.rstrip()
+				line = file.readline()
 
+		file.close()
+		
 	return
 
 def lio_target_list_nps(option, opt_str, value, parser):
@@ -470,14 +560,20 @@ parser.add_option("--demomode", action="callback", callback=lio_target_tpg_demom
 	type="string", dest="TARGET_IQN TPGT", help="Enable DemoMode for LIO-Target Portal Group")
 parser.add_option("--disableauth", action="callback", callback=lio_target_tpg_disableauth, nargs=2,
 	type="string", dest="TARGET_IQN TPGT", help="Disable iSCSI Authentication for LIO-Target Portal Group")
+parser.add_option("--disablelunwp", action="callback", callback=lio_target_disable_lunwp, nargs=4,
+	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Clear Write Protect bit for iSCSI Initiator LUN ACL")
 parser.add_option("--disabletpg", action="callback", callback=lio_target_disable_tpg, nargs=2,
 	type="string", dest="TARGET_IQN TPGT", help="Disable LIO-Target Portal Group")
+parser.add_option("--enablelunwp", action="callback", callback=lio_target_enable_lunwp, nargs=4,
+	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Set Write Protect bit for iSCSI Initiator LUN ACL")
 parser.add_option("--enabletpg", action="callback", callback=lio_target_enable_tpg, nargs=2,
 	type="string", dest="TARGET_IQN TPGT", help="Enable LIO-Target Portal Group")
 parser.add_option("--listendpoints", action="callback", callback=lio_target_list_endpoints, nargs=0,
 	help="List iSCSI Target Endpoints")
+parser.add_option("--listlunacls", action="callback", callback=lio_target_list_lunacls, nargs=2,
+	type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator LUN ACLs for LIO-Target Portal Group")
 parser.add_option("--listnodeacls", action="callback", callback=lio_target_list_nodeacls, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator ACLs for LIO-Target Portal Groups")
+	type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator ACLs for LIO-Target Portal Group")
 parser.add_option("--listnps", action="callback", callback=lio_target_list_nps, nargs=2,
 	type="string", dest="TARGET_IQN TPGT", help="List LIO-Target Portal Group Network Portals")
 parser.add_option("--listtargetnames", action="callback", callback=lio_target_list_targetnames, nargs=0,
