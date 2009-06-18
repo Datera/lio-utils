@@ -421,11 +421,15 @@ def lio_target_list_lunacls(option, opt_str, value, parser):
 			else:
 				wp_info = "DISABLED"
 			
-			lun_link = lun_root_dir + "/" + lun + "/" + lun
-			sourcelink = os.readlink(lun_link)
-			 # Skip over ../../../../../../ in sourcelink"
-			print "         \-------> " + lun + " -> " + sourcelink[21:]
-			print "                   \-------> Write Protect for " + lun + ": " + wp_info
+			lun_link_dir = lun_root_dir + "/" + lun
+			for lun_link in os.listdir(lun_link_dir):
+				if lun_link == "write_protect":
+					continue
+				
+				sourcelink = os.readlink(lun_link_dir + "/" + lun_link)
+				# Skip over ../../../../../../ in sourcelink"
+				print "         \-------> " + lun + " -> " + sourcelink[21:]
+				print "                   \-------> Write Protect for " + lun + ": " + wp_info
 
 	return
 
