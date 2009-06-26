@@ -1,0 +1,803 @@
+#!/usr/bin/perl
+
+##################################################################################
+# Filename:  autoconfig.master
+#
+# Copyright (c) 2006-2007 SBE, Inc.  All Rights Reserved.
+# Copyright (c) 2007-2009 Linux-iSCSI.org
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+##################################################################################
+
+
+use File::Basename;
+use File::Temp qw/ tempfile tempdir mktemp/;
+use Cwd;
+
+push @INC, dirname($0);
+
+my $current_ostype = dirname($0) . "/ostype.pm";
+
+#if (! -e $current_ostype )
+#{
+#    my $OSTYPE="http://linux-iscsi.org/svn/trunk/buildtools/ostype.pm";
+#    `svn cat $OSTYPE > $current_ostype`;
+#}
+
+require ostype;
+
+
+$options =
+{   
+    root_dir => $ENV{'ROOT_DIR'},
+    current_directory => getcwd(),
+    product_directory => dirname($0),
+    autoconfig_file => ".make_autoconfig"
+};
+
+sub setup
+{
+    my @opts =@_;
+    my @args;
+
+    foreach my $opt (@opts)
+    {
+        for ($opt)
+        {
+            if (/^--write-to-file(.*)/)
+            {
+		unless ("$1" eq "")
+		{
+		    $options->{autoconfig_file} = $1;
+		    $options->{autoconfig_file} =~ s/^=//;
+		}
+
+		$options->{write_to_file}=1;
+		next;
+	    }
+	    if (/^--root=(.*)/)
+	    {
+		$options->{root_dir}=$1;
+		next;
+	    }
+	    if (/^--product-directory=(.*)/)
+	    {
+		$options->{product_directory}=$1;
+		next;
+	    }
+	    if (/^--jakarta-directory=(.*)/)
+	    {
+		$options->{jakarta_directory}=$1;
+		next;
+	    }
+	    if (/^--current-directory=(.*)/)
+	    {
+		$options->{current_directory}=$1;
+		next;
+	    }
+	    if (/^--arch=(.*)/)
+	    {
+		$options->{arch}=$1;
+		next;
+	    }
+	    if (/^--version=(.*)/)
+	    {
+		$options->{version}=$1;
+		next;
+	    }
+	    if (/^--deliver-rpms-to=(.*)/)
+	    {
+		$options->{deliver_rpms_to}=$1;
+		next;
+	    }
+	    if (/^--/)
+            {
+                die "Invalid option $_\n";
+            }
+    	    else
+	    {
+		push @args, $opt;
+	    }
+	}
+    }
+
+    if ($options->{write_to_file})
+    {
+	open(AUTOCONFIGFILE,">$options->{current_directory}/$options->{autoconfig_file}") || 
+	    die "Could not open $options->{autoconfig_file}";
+    }
+
+    return @args;
+}
+
+sub check_and_define
+{
+    my ($match, $string, @files) = @_;
+
+    foreach my $file (@files)
+    {
+	next if ( ! -e $file);
+
+	my $txt = `cat $file`;
+
+	if ($txt =~ /$match/)
+	{
+	    $env->{AUTO_CFLAGS} .=" $string";
+	    return;
+	}
+    }
+}
+
+sub LIO_VERSION
+{
+    my $lio_ver = "3.0";
+    my $lio_utils_git_rev = `git rev-list --max-count=1 HEAD`;
+    chomp($lio_utils_ver);
+
+    $env->{LIO_VERSION} = $lio_ver;
+    $env->{LIO_UTILS_VERSION} = "$lio_ver";
+
+    return($lio_ver)
+}
+
+sub ISNS_VERSION
+{
+    my $txt = `svnversion $options->{product_directory}`;   # get repository revision
+    $txt =~ m/([\d:]*)\D/;
+    $svn_vsn = $1;
+    $svn_vsn =~ s/:/./;
+    $svn_vsn = "0" if ($svn_vsn eq "");
+
+    $txt = `grep ISNS_VERSION $options->{product_directory}/include/iSNS.h 2>/dev/null`;
+    if ($txt =~ /ISNS_VERSION\s+(.*)$/)
+    {
+	$txt = $1;
+    } else {
+	$txt = `grep ISNS_VERSION $options->{product_directory}/include/isns.h 2>/dev/null`;
+	if ($txt =~ /ISNS_VERSION\s+(.*)$/)
+	{
+	    $txt = $1;
+	} else {
+	    return;
+	}
+    }
+    $txt =~ s/SVN_VSN/$svn_vsn/;	# put in repository revision
+    $txt =~ s/\"//g;			# remove spaces, quotes, and v
+    $txt =~ s/^v//;
+    $txt =~ s/\s//g;
+    $txt =~ s/-.*$//;			# trim off -SBE
+    $env->{ISNS_VERSION} = $txt;
+}
+
+
+sub dump_options
+{
+    foreach my $key ( sort keys %{$env} )
+    {
+	if ($options->{write_to_file})
+	{
+	    print AUTOCONFIGFILE "$key?=$env->{$key}\n";
+	}
+	else
+	{
+	    print "$key?=$env->{$key}\n";
+	}
+    }
+
+    foreach my $key ( sort keys %{$logic} )
+    {
+	if ($options->{write_to_file})
+	{
+	    print AUTOCONFIGFILE "$logic->{$key}";
+	}
+	else
+	{
+	    print "$logic->{$key}";
+	}
+    }
+}
+
+sub dump_config
+{
+    my $ostype = ostype($options->{root_dir});
+
+    foreach my $key ( sort keys %{$ostype} )
+    {
+	if (($ostype->{BASENAME} =~ /^ELinos/) && ($ostype->{$key} =~ /^\//))
+	{
+		$env->{$key} = "$options->{root_dir}$ostype->{$key}";
+	} else {
+		$env->{$key} = $ostype->{$key};
+	}
+    }
+
+    check_and_define("UTS_RELEASE",
+		     "-DHAS_UTS_RELEASE",
+		     "$ostype->{KERNEL_INCLUDE_DIR}/linux/utsrelease.h");
+
+    check_and_define("_SCSI_H",
+		     "-DUSE_SCSI_H -I$ostype->{KERNEL_SOURCE_DIR}/drivers/scsi ",
+		     "$ostype->{KERNEL_SOURCE_DIR}/drivers/scsi/scsi.h");
+
+    check_and_define("msleep",
+		     "-DUSE_MSLEEP",
+		     "$ostype->{KERNEL_INCLUDE_DIR}/linux/delay.h");
+
+    if ( ! -e "$ostype->{KERNEL_INCLUDE_DIR}/scsi/scsi_request.h")
+    {
+    	$env->{AUTO_CFLAGS} .= " -Dscsi_execute_async_address ";
+    }
+
+    if ($ENV{'ISCSI_VENDOR'} eq "") {
+	$env->{AUTO_CFLAGS} .= " -DPYX_ISCSI_VENDOR=\'\"Linux-iSCSI.org\"\' ";
+    } else {
+    	$env->{AUTO_CFLAGS} .= " -DPYX_ISCSI_VENDOR=\'\"$ENV{'ISCSI_VENDOR'}\"\' ";
+    }
+    if (($ENV{'IQN_VENDOR'}) eq "") {
+	$env->{AUTO_CFLAGS} .= " -DIQN_PREFIX=\'\"iqn.2003-01.org.linux-iscsi\"\' ";
+    } else {
+    	$env->{AUTO_CFLAGS} .= " -DIQN_PREFIX=\'\"$ENV{'IQN_VENDOR'}\"\' ";
+    }
+    $env->{AUTO_CFLAGS} .= " -DLINUX" if ($ostype->{OSTYPE} eq "LINUX");
+
+    if ($ostype->{KERNEL} eq "26")
+    {
+	$env->{AUTO_CFLAGS} .= " -DLINUX_SCATTERLIST_HAS_PAGE";
+    }
+    else
+    {
+	$env->{AUTO_CFLAGS} .= " -DLINUX_SCATTERLIST_HAS_ADDRESS";
+    }
+
+    $final_svn_vsn = LIO_VERSION();
+    ISNS_VERSION();
+    $env->{AUTO_CFLAGS} .= " -DSVN_VSN=\\\"$final_svn_vsn\\\"";
+
+    if ($ostype->{BASENAME} =~ /^RedHat-R3.*i386/)
+    {
+	my $cputype = "$ENV{'CPUTYPE'}";
+	if ($cputype eq "i586") {	$env->{AUTO_CFLAGS} .= " -D__MODULE_KERNEL_i586=1"; }
+	elsif ($cputype eq "athlon") {	$env->{AUTO_CFLAGS} .= " -D__MODULE_KERNEL_athlon=1"; }
+	else {				$env->{AUTO_CFLAGS} .= " -D__MODULE_KERNEL_i686=1"; }
+	$env->{AUTO_CFLAGS} .= " -D__BOOT_KERNEL_ENTERPRISE=0";
+	$env->{AUTO_CFLAGS} .= " -D__BOOT_KERNEL_UP=1";
+
+	$env->{AUTO_CFLAGS} .= " -D__BOOT_KERNEL_SMP=1"         if ($ostype->{RELEASE} =~ /smp/);
+	$env->{AUTO_CFLAGS} .= " -D__BOOT_KERNEL_HUGEMEM=1"     if ($ostype->{RELEASE} =~ /hugemem/);
+	$env->{AUTO_CFLAGS} .= " -D__BOOT_KERNEL_BIGMEM=1"      if ($ostype->{RELEASE} =~ /bigmem/);
+    }
+
+    $env->{SNMP} = 0 unless -e "$options->{root_dir}/usr/include/net-snmp";
+
+    dump_options();
+
+    if ($options->{write_to_file})
+    {
+	close (AUTOCONFIGFILE);
+	print "$options->{current_directory}/$options->{autoconfig_file}\n";
+    }
+}
+
+
+sub make_target_kernel_rpm
+{
+    my $ostype = ostype($options->{root_dir});
+    my $ko = ($ostype->{KERNEL} eq "26") ? "ko" : "o";
+    my $tcm_base = "/lib/modules/$ostype->{RELEASE}/kernel/drivers/target";
+    my $lio_base = "/lib/modules/$ostype->{RELEASE}/kernel/drivers/lio-core";
+
+    LIO_VERSION();
+
+	print "Version: $env->{LIO_VERSION}";
+
+    make_rpm({ name => "target_core_mod-$ostype->{RELEASE}",
+               product_name => "Target_Core_Mod/ConfigFS Kernel Module",
+               version => $env->{LIO_VERSION},
+               release => 1,
+               group => "Target Core_Mod/ConfigFS(kernel)",
+               provides => "target-core-module",
+               post => "depmod -r\n",
+               files => { "$tcm_base/target_core_mod.$ko" =>
+                          { original => "kernel/drivers/target/target_core_mod.$ko",
+                            mode => 644}}});
+
+    make_rpm({ name => "iscsi_target_mod-$ostype->{RELEASE}",
+               product_name => "Linux-iSCSI.org Target Kernel Module",
+               version => $env->{LIO_VERSION},
+               release => 1,
+               group => "LIO-Target Fabric module(kernel)",
+               provides => "iscsi-target-module",
+	       post => "depmod -r\n",
+               files => { "$lio_base/iscsi_target_mod.$ko" =>
+                          { original => "kernel/drivers/lio-core/iscsi_target_mod.$ko",
+                            mode => 644}}});
+}
+
+sub make_target_user_rpm
+{
+    my $ostype = ostype($options->{root_dir});
+    my $mandir = "/usr/share/man";
+    my $value = `python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"`;
+    my $py_inst_dir = $value = substr($value,0,length($value)-1); 
+
+    LIO_VERSION();
+
+    my $text=`rpm --showrc`;
+    if ($text =~ /_mandir\s+(\/.*?)\s/)
+    {
+	$mandir=$1;
+	print "MANDIR: $mandir\n";
+    }
+
+    my $iscsid = { name => "lio-utils",
+		   product_name => "Linux-iSCSI.org Target v3.x Userspace utils",
+		   version => $env->{LIO_UTILS_VERSION},
+		   release => 1,
+		   group => "Linux-iSCSI.org/Target (applications)",
+		   requires => "target-core-modules",
+		   requires => "iscsi-target-module",
+	       };
+
+    $iscsid->{files} = { "/etc/init.d/target" => { original => "scripts/rc.target",
+							mode => 755},
+			"/etc/target/tcm_start.sh" => { original => "conf/tcm_start.default",
+							config => 1,
+							mode => 755},
+			"$py_inst_dir/tcm_node.py" => { original => "tcm-py/tcm_node.py",
+							mode => 755},
+			"$py_inst_dir/tcm_pscsi.py" => { original => "tcm-py/tcm_pscsi.py",
+							mode => 755},
+			"$py_inst_dir/tcm_iblock.py" => { original => "tcm-py/tcm_iblock.py",
+							mode => 755},
+			"$py_inst_dir/tcm_fileio.py" => { original => "tcm-py/tcm_fileio.py",
+							mode => 755},
+			"$py_inst_dir/tcm_ramdisk.py" => { original => "tcm-py/tcm_ramdisk.py",
+							mode => 755},
+			"$py_inst_dir/tcm_dump.py" => { original => "tcm-py/tcm_dump.py",
+							mode => 755},
+			"/sbin/iscsi-name"         => { original => "tools/iscsi-name",
+							mode => 755},
+			"$py_inst_dir/lio_node.py" => { original => "lio-py/lio_node.py",
+							mode => 755},
+			"$py_inst_dir/lio_dump.py" => { original => "lio-py/lio_dump.py",
+							mode => 755},
+		     };
+
+    $iscsid->{post} .= "if [ ! -h /usr/sbin/tcm_node ]; then ln -s $py_inst_dir/tcm_node.py /usr/sbin/tcm_node; fi; ";
+    $iscsid->{post} .= "if [ ! -h /usr/sbin/tcm_dump ]; then ln -s $py_inst_dir/tcm_dump.py /usr/sbin/tcm_dump ; fi; ";
+    $iscsid->{post} .= "if [ ! -h /usr/sbin/lio_node ]; then ln -s $py_inst_dir/lio_node.py /usr/sbin/lio_node ; fi;";
+    $iscsid->{post} .= "if [ ! -h /usr/sbin/lio_dump ]; then ln -s $py_inst_dir/lio_dump.py /usr/sbin/lio_dump ; fi;";
+
+    $iscsid->{preun} .= "unlink /usr/sbin/tcm_node ;";
+    $iscsid->{preun} .= "unlink /usr/sbin/tcm_dump ;";
+    $iscsid->{preun} .= "unlink /usr/sbin/lio_node ;";
+    $iscsid->{preun} .= "unlink /usr/sbin/lio_dump ;";
+
+    $iscsid->{python_obj} = { "$py_inst_dir/tcm_node.pyc" }, { "$py_inst_dir/tcm_node.pyo" },
+			    { "$py_inst_dir/tcm_pscsi.pyc" }, { "$py_inst_dir/tcm_pscsi.pyo" },
+		    	    { "$py_inst_dir/tcm_iblock.pyc" }, { "$py_inst_dir/tcm_iblock.pyo" },
+			    { "$py_inst_dir/tcm_fileio.pyc" }, { "$py_inst_dir/tcm_fileio.pyo" },
+			    { "$py_inst_dir/tcm_ramdisk.pyc" }, { "$py_inst_dir/tcm_ramdisk.pyo" },
+			    { "$py_inst_dir/tcm_dump.pyc" }, { "$py_inst_dir/tcm_dump.pyo" };
+
+
+    if ($ostype->{DISTRO} eq "SUSE")
+    {
+#	$iscsid->{files} -> { "/etc/init.d/target" } = 
+#	{ original => "ipyxd/scripts/suse.target", mode => 755};
+
+#	$iscsid->{files} -> { "/sbin/target-ctl" } =
+ #       { original => "ipyxd/scripts/target-ctl.wrapper", mode => 755};
+
+#	$iscsid->{post} .= "insserv target\n";			# no longer set up autostart
+	$iscsid->{preun} .= "insserv -r target\n";
+
+    }
+    elsif ($ostype->{DISTRO} =~ /REDHAT|CENTOS|FEDORA|MANDRAKE|ELINOS/)
+    {
+#	$iscsid->{files} -> { "/etc/init.d/target" } = 
+#	{ original => "ipyxd/scripts/rc.target", mode => 755};
+
+#	$iscsid->{files} -> { "/sbin/target-ctl" } =
+#        { original => "ipyxd/scripts/target-ctl.wrapper", mode => 755};
+
+#	$iscsid->{post} .= 					# no longer set up autostart
+#	    "chkconfig --add target\n".
+#	    "chkconfig target on\n";
+	$iscsid->{preun} .= 
+	    "chkconfig target off\n".
+	    "chkconfig --del target\n";
+    }
+    elsif ($ostype->{DISTRO} =~ /GENTOO/)
+    {
+	$iscsid->{files} -> { "/etc/init.d/target" } = 
+	{ original => "ipyxd/scripts/gentoo.target", mode => 755};
+
+	$iscsid->{files} -> { "/sbin/target.sh" } =
+        { original => "ipyxd/scripts/rc.target", mode => 755};
+
+	$iscsid->{files} -> { "/sbin/target-ctl" } =
+        { original => "ipyxd/scripts/target-ctl.wrapper", mode => 755};
+
+#	$iscsid->{post} .= 
+#	    "ln -s /etc/init.d/target /etc/runlevels/default/target\n";
+	$iscsid->{preun} .= 
+	    "rm -f /etc/runlevels/default/target\n";
+    }
+
+    make_rpm($iscsid);
+
+}
+
+
+sub make_isns_client_rpm
+{
+    my $ostype = ostype($options->{root_dir});
+    ISNS_VERSION();
+
+
+    my $target_files = {"/sbin/isnsc" => { original => ".",
+                                            mode => 755},
+                        "/sbin/isns_".
+			    "{register,deregister,reregister,iscsi_index,nodes,is_node_registered,".
+			    "network_portals,update_portals,client,initiators}" => { original => "scripts",
+								   mode => 755},
+			"/sbin/isns_".
+			"{create_dd,delete_dd,".
+			"add_node_to_dd,remove_node_from_dd,list_dd_all,list_dd_members,create_dds,".
+			"delete_dds,enable_dds,disable_dds,add_dd_to_dds,remove_dd_from_dds,list_dds_all,".
+			"list_dds_members,is_control_node,list_node_detail,".
+			"list_nodes_all,".
+			"save_config}" => { original => "scripts",
+					    mode => 755},
+			"/var/{spool,log}/isns"          => { dir=>1,
+							      mode=>755},
+			
+		    };
+#
+#    my $initiator_files  = { "/sbin/isnsc" => { original => ".",
+#					    mode => 755},
+#			     "/sbin/isns_".
+#				 "{register,deregister,reregister,iscsi_index,nodes,is_node_registered,".
+#				 "network_portals,update_portals,client,initiators}" => { original => "scripts",
+#									mode => 755},
+#				 
+#			      "/var/{spool,log}/isns"          => { dir=>1,
+#								    mode=>755},
+#			      
+#			 };
+
+
+#    if ($ostype->{DISTRO} eq "SUSE")
+#    {
+#	$initiator_files -> {"/etc/init.d/initiator_isns"} = { original => "sysvinit/suse.initiator_isns",
+#							     mode => 755,
+#							     config =>1};
+#	$target_files -> {"/etc/init.d/target_isns"} = { original => "sysvinit/suse.target_isns",
+#						       mode => 755,
+#						       config =>1};
+#
+#    }
+#    else
+#    {
+#	$initiator_files -> {"/etc/init.d/initiator_isns"} = { original => "sysvinit/redhat.initiator_isns",
+#								    mode => 755,
+#								    config =>1};
+#	$target_files -> {"/etc/init.d/target_isns"} = { original => "sysvinit/redhat.target_isns",
+#
+#							      mode => 755,
+#							      config =>1};
+#
+#   }
+
+    make_rpm({ name => "lio-isns-control-client",
+               product_name => "Linux-iSCSI.org iSNS control client toolkit",
+               version => $env->{ISNS_VERSION},
+               release => 1,
+               group => "Linux-iSCSI.org/iSNS (isnsclient,applications)",
+               files => $target_files});
+}
+
+sub make_isns_server_rpm
+{
+    my $ostype = ostype($options->{root_dir});
+    ISNS_VERSION();
+
+    my $server = { name => "lio-isns-server",
+		   product_name => "Linux-iSCSI.org iSNS Server Toolkit for iSCSI Control Node",
+		   version => $env->{ISNS_VERSION},
+		   release => 1,
+		   group => "Linux-iSCSI.org/Name Server (isnsserver,applications)",
+		   files => {"/sbin/isnss" => { original => ".",
+						mode => 755},
+			     "/etc/sysconfig/isnsserver.conf" => { original => "sysvinit",
+								   mode=>644,
+								   config=>1},
+			     "/var/{spool,log}/isns"          => { dir=>1,
+								   mode=>755},
+			 },  
+	       };
+
+    if ($ostype->{DISTRO} eq "SUSE")
+    {
+        $server->{files}->{"/etc/init.d/isnsserver"} = { original => "sysvinit/suse.isnsserver",
+						       mode => 755};
+
+#	$server->{post} .= "insserv isnsserver\n";		# no longer set up autostart
+        $server->{preun} .= "insserv -r isnsserver\n";
+    }
+    elsif ($ostype->{DISTRO} =~ /REDHAT|CENTOS|FEDORA|MANDRAKE|ELINOS/)
+    {
+	$server->{files}->{"/etc/init.d/isnsserver"} = { original => "sysvinit/redhat.isnsserver",
+							      mode => 755};
+#	$iscsid->{post} .= 					# no longer set up autostart
+#            "chkconfig --add isnsserver\n".
+#            "chkconfig isnsserver on\n";
+        $server->{preun} .=
+            "chkconfig isnsserver off\n".
+            "chkconfig --del isnsserver\n";
+    }
+    elsif ($ostype->{DISTRO} =~ /GENTOO/)
+    {
+	$server->{files}->{"/etc/init.d/isnsserver"} = { original => "sysvinit/redhat.isnsserver",
+                                                              mode => 755};
+    }
+
+    make_rpm($server);
+}
+
+sub make_mibs_rpm
+{
+    my $mibfile = "/usr/lib/snmp/dlmod/iscsiTargetMib.so";
+
+    LIO_VERSION();
+
+    my $snmpconf =  "/etc/snmpd.conf";
+    $snmpconf = "/etc/snmpd/snmpd.conf" if ( -e "/etc/snmpd/snmpd.conf");
+
+    my $rpm = { name => "lio-mibs",
+		product_name => "LIO's Target SCSI and iSCSI MIB file(s)",
+		version => $env->{LIO_VERSION},
+		release => 1,
+		group => "TCM and LIO-Target (mibs,$ostype->{ARCH},libraries)",
+		files => {
+		    $mibfile  => { original => "mib-modules"},
+		    "/etc/iscsi/setup_snmpd"  => { original => "mib-modules"},
+		    "/usr/share/snmp/mibs/LIO-{ISCSI,SCSI,IPS-AUTH}-MIB.txt" => { original =>"mib-modules/mibs"},
+		},
+
+		post => "/etc/iscsi/setup_snmpd install\n",
+		preun => "if [ \$1 -eq 0 ]; then /etc/iscsi/setup_snmpd uninstall; fi\n",
+	    };
+
+    make_rpm($rpm);
+}
+
+sub make_rpm
+{
+    my $rpm = shift @_;
+    my $arch = shift @_;
+
+    my $ostype = ostype($options->{root_dir});
+    $ostype->{RPM_DIR} = "$options->{root_dir}$ostype->{RPM_DIR}" if ($ostype->{BASENAME} =~ /^ELinos/);
+    my $specfile = "$ostype->{RPM_DIR}/SPECS/$rpm->{name}-$rpm->{version}.spec";
+    my $build_dir = "$ostype->{RPM_DIR}/BUILD/$rpm->{name}-$rpm->{version}";
+
+    $arch = $ostype->{ARCH} if ($arch eq "");
+
+    open(SPECFILE, ">$specfile") || die "Could not create $specfile";
+
+    print SPECFILE
+
+	"Summary: $rpm->{product_name}\n".
+	"Name: $rpm->{name}\n".
+	"Version: $rpm->{version}\n".
+	"Release: $rpm->{release}\n".
+	"Group: $rpm->{group}\n".
+	"Source: $rpm->{name}.tar.bz2\n".
+	"Distribution: $ostype->{SYSTEM} with kernel $ostype->{RELEASE}\n".
+	"License: $rpm->{product_name}, Commercial\n";
+
+    if ($ostype->{DISTRO} eq "SUSE")
+    {
+	print SPECFILE "Buildroot: ${build_dir}-root\n";
+    }
+    else
+    {
+	print SPECFILE "Buildroot: ${build_dir}\n";
+    }
+
+    print SPECFILE "Prereq: $rpm->{prereqs}\n" unless ($rpm->{prereqs} eq "");
+
+    print SPECFILE "%post \n$rpm->{post}\n" unless ($rpm->{post} eq "");
+    print SPECFILE "%preun \n$rpm->{preun}\n" unless ($rpm->{preun} eq "");
+    print SPECFILE "%pre \n$rpm->{pre}\n" unless ($rpm->{pre} eq "");
+
+    print SPECFILE
+
+	"%define debug_package %{nil}\n".
+	"\n".
+	"%description\n".
+	"$rpm->{product_name} for $ostype->{SYSTEM}\n".
+	"%prep\n".
+	"%setup -q\n".
+	"%build\n";
+
+    if ($ostype->{DISTRO} eq "SUSE")
+    {
+	print SPECFILE 
+	    "%install\n".
+	    "cp -ra ${build_dir}/. ${build_dir}-root/.\n";
+    }
+    else
+    {
+        print SPECFILE "%install\n";
+    }
+
+    print SPECFILE "%files\n";
+
+    system("rm -fr  $build_dir");
+
+    foreach my $file ( sort keys %{$rpm->{files}} )
+    {
+	my $orig = $rpm->{files}->{$file}->{original};
+
+	my @files;
+
+	if ($file =~ /(.*?){(.*?)}(.*)/)
+	{
+	    my $prefix = $1;
+	    my $postfix = $3;
+	    my @items = split(/,/,$2);
+
+	    foreach my $item ( @items )
+	    {
+		push @files, "$prefix$item$postfix";
+	    }
+	}
+	else
+	{
+	    push @files, $file;
+	}
+
+	foreach my $expanded_file ( @files )
+	{
+	    my $orig_expanded_file = $expanded_file;
+
+	    unless ($orig eq "")
+	    {
+		my $real_orig = $orig;
+
+		if ((-d $orig) && (! -d "$orig/$expanded_file") )
+		{
+		    $real_orig .= "/" . basename($expanded_file);
+		}
+
+		if ( -e $real_orig )
+		{
+		    system("mkdir -p $build_dir/" . dirname($expanded_file));
+		    if (system("cp -rav $real_orig $build_dir/$expanded_file")!=0)
+		    {
+			die "Could not copy from $real_orig\n";
+		    }
+		}
+	     }
+
+	    unless ($rpm->{files}->{$file}->{mode} eq "")
+	    {
+		if ($ostype->{DISTRO} eq "MANDRAKE") {
+		    system("chmod $rpm->{files}->{$file}->{mode} $build_dir/$expanded_file");
+		} else {
+		    system("chmod -v $rpm->{files}->{$file}->{mode} $build_dir/$expanded_file");
+		}
+	    }
+
+	    if (defined $rpm->{files}->{$file}->{compress})
+	    {
+		system("gzip -9 $build_dir/$expanded_file");
+		if ($ostype->{DISTRO} eq "MANDRAKE") {
+		    $expanded_file .= ".bz2";
+		} else {
+		    $expanded_file .= ".gz";
+		}
+	    }
+
+	    if (defined $rpm->{files}->{$file}->{dir})
+	    {
+		`mkdir -p $build_dir/$expanded_file`;
+		$expanded_file = "%dir $expanded_file";
+	    }
+
+	    if (defined $rpm->{files}->{$file}->{config})
+	    {
+		$expanded_file = "%config $expanded_file";
+	    }
+
+	    if ( -e "$build_dir/$orig_expanded_file" ||
+		 (defined $rpm->{files}->{$file}->{compress} && -e "$build_dir/${orig_expanded_file}.gz"))
+	    {
+		print SPECFILE "$expanded_file\n";
+	    }
+	    else
+	    {
+		print "Skipping: $build_dir/$expanded_file\n";
+	    }
+	}
+    }
+
+#    foreach my $py_obj_file ( sort keys %{$rpm->{python_obj}} )
+#    {
+#	print "py_obj_file: $py_obj_file\n";
+#	print SPECFILE "$py_obj_file\n";
+#    }
+
+
+    close SPECFILE;
+
+    $build_dir .= "/." if ($ostype->{NO_RPM} || $options->{NO_RPM});
+    system("tar cfj $ostype->{RPM_DIR}/SOURCES/$rpm->{name}.tar.bz2 -C " . 
+	   dirname($build_dir) . " " . basename($build_dir) );
+
+    if ($ostype->{NO_RPM} || $options->{NO_RPM}) {
+    	if ($arch ne "") {
+		system ("mkdir $ostype->{RPM_DIR}/RPMS/$arch") unless (-e "$ostype->{RPM_DIR}/RPMS/$arch");
+		system("mv $ostype->{RPM_DIR}/SOURCES/$rpm->{name}.tar.bz2 $ostype->{RPM_DIR}/RPMS/$arch/$rpm->{name}.$arch.tar.bz2");
+	} else {
+		system("mv $ostype->{RPM_DIR}/SOURCES/$rpm->{name}.tar.bz2 $ostype->{RPM_DIR}/RPMS");
+	}
+    } else {
+    	die "RPM build failure: rpmbuild --target $arch -bb -vv $specfile" if (system("rpmbuild --target $arch -bb -vv $specfile")!=0);
+    }
+}
+
+
+
+sub main
+{
+    my @args = setup(@_);
+    my $cmd = shift @args;
+
+    for ($cmd)
+    {
+	if (/^$/)
+	{
+	    dump_config();
+	    last;
+	}
+
+	elsif (/^make_target_kernel_rpm$/)
+	{
+	    make_target_kernel_rpm(@args);
+	    last;
+	}
+
+	elsif (/^make_target_user_rpm$/)
+        {
+            make_target_user_rpm(@args);
+            last;
+        }
+
+	elsif (/^make_isns_client_rpm$/)
+	{
+	    make_isns_client_rpm();
+	    last;
+	}
+	elsif (/^make_isns_server_rpm$/)
+	{
+	    make_isns_server_rpm();
+	    last;
+	}
+	elsif (/^make_mibs_rpm$/)
+	{
+	    make_mibs_rpm(@args);
+            last;
+        }
+    }
+}
+
+
+main(@ARGV);
+exit(0);

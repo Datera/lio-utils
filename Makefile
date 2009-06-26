@@ -11,6 +11,14 @@ ifeq ($(SNMP_FEATURE), 1)
 	-if test -d mib-modules; then make -C mib-modules; fi;
 endif
 
+user_rpms:
+	-if test -d tools; then make -C tools; fi;
+	./autoconfig make_target_user_rpm
+ifeq ($(SNMP_FEATURE), 1)
+	-if test -d mib-modules; then make -C mib-modules; fi;
+	./autoconfig make_mibs_rpm
+endif
+
 install: all
 	cd tcm-py ; sh install.sh
 	cd lio-py ; sh install.sh
