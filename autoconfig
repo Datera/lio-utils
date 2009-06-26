@@ -599,7 +599,7 @@ sub make_rpm
 	"Group: $rpm->{group}\n".
 	"Source: $rpm->{name}.tar.bz2\n".
 	"Distribution: $ostype->{SYSTEM} with kernel $ostype->{RELEASE}\n".
-	"License: $rpm->{product_name}, Commercial\n";
+	"License: $rpm->{product_name}, GPL\n";
 
     if ($ostype->{DISTRO} eq "SUSE")
     {
