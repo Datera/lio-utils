@@ -200,7 +200,7 @@ scsiInstanceTable_handler(netsnmp_mib_handler *handler,
     return SNMP_ERR_NOERROR;
 }
 
-#define PROC_SCSI_INST "/proc/iscsi_target/mib/scsi_inst"
+#define PROC_SCSI_INST "/proc/scsi_target/mib/scsi_inst"
 #define SCSI_INST_LINE "%lu %lu"
 
 int 
@@ -437,7 +437,7 @@ scsiDeviceTable_handler(netsnmp_mib_handler *handler,
     return SNMP_ERR_NOERROR;
 }
 
-#define PROC_SCSI_DEV "/proc/iscsi_target/mib/scsi_dev"
+#define PROC_SCSI_DEV "/proc/scsi_target/mib/scsi_dev"
 #define SCSI_DEV_LINE "%lu %lu %s %lu"
 
 int 
@@ -670,7 +670,7 @@ scsiPortTable_handler(netsnmp_mib_handler *handler,
     return SNMP_ERR_NOERROR;
 }
 
-#define PROC_SCSI_PORT "/proc/iscsi_target/mib/scsi_port"
+#define PROC_SCSI_PORT "/proc/scsi_target/mib/scsi_port"
 #define SCSI_PORT_LINE "%lu %lu %lu %s %lu"
 /*
  * scsiTransportTable.scsiTransportEntry.scsiTransportType
@@ -908,7 +908,7 @@ scsiTransportTable_handler(netsnmp_mib_handler *handler,
     return SNMP_ERR_NOERROR;
 }
 
-#define PROC_SCSI_TRANSPORT "/proc/iscsi_target/mib/scsi_transport"
+#define PROC_SCSI_TRANSPORT "/proc/scsi_target/mib/scsi_transport"
 #define SCSI_TRANSPORT_LINE "%lu %lu %lu %s"
 static oid scsiTransportISCSI_oid[] = {OID_LIO_SCSI_MIB,1,1,5};
 static oid iscsiInstAttributes_oid[] = {OID_LIO_ISCSI_MIB,1,1,1,1,2};
@@ -1172,7 +1172,7 @@ scsiTgtDevTable_free(struct scsiTgtDevTable_entry **table_head_ptr)
     }
 }
 
-#define PROC_SCSI_TGT_DEV "/proc/iscsi_target/mib/scsi_tgt_dev"
+#define PROC_SCSI_TGT_DEV "/proc/scsi_target/mib/scsi_tgt_dev"
 #define SCSI_TGT_DEV_LINE "%lu %lu %lu %s %lu %lu"
 
 void 
@@ -1428,7 +1428,7 @@ scsiTgtPortTable_handler(netsnmp_mib_handler *handler,
     return SNMP_ERR_NOERROR;
 }
 
-#define PROC_SCSI_TGT_PORT "/proc/iscsi_target/mib/scsi_tgt_port"
+#define PROC_SCSI_TGT_PORT "/proc/scsi_target/mib/scsi_tgt_port"
 #define SCSI_TGT_PORT_LINE_32 "%lu %lu %lu %s %s %llu %lu %lu"
 #define SCSI_TGT_PORT_LINE_64 "%lu %lu %lu %s %s %lu %lu %lu"
 
@@ -1705,7 +1705,7 @@ scsiAuthorizedIntrTable_handler(netsnmp_mib_handler *handler,
     return SNMP_ERR_NOERROR;
 }
 
-#define PROC_SCSI_AUTH_INTR "/proc/iscsi_target/mib/scsi_auth_intr"
+#define PROC_SCSI_AUTH_INTR "/proc/scsi_target/mib/scsi_auth_intr"
 #define SCSI_AUTH_INTR_LINE "%lu %lu %lu %lu %lu %s %lu %lu %lu %lu %lu %lu"
 
 int 
@@ -1940,7 +1940,7 @@ scsiAttIntrPortTable_handler(netsnmp_mib_handler *handler,
     return SNMP_ERR_NOERROR;
 }
 
-#define PROC_SCSI_ATT_INTR_PORT "/proc/iscsi_target/mib/scsi_att_intr_port"
+#define PROC_SCSI_ATT_INTR_PORT "/proc/scsi_target/mib/scsi_att_intr_port"
 #define SCSI_ATT_INTR_PORT_LINE "%lu %lu %lu %lu %lu %s"
 
 int 
@@ -2221,7 +2221,7 @@ scsiLuTable_handler(netsnmp_mib_handler *handler,
     return SNMP_ERR_NOERROR;
 }
 
-#define PROC_SCSI_LU "/proc/iscsi_target/mib/scsi_lu"
+#define PROC_SCSI_LU "/proc/scsi_target/mib/scsi_lu"
 #define SCSI_LU_LINE_32 "%lu %lu %lu %llu %s %lu %s %s %llu %lu %lu %lu"
 #define SCSI_LU_LINE_64 "%lu %lu %lu %lu %s %lu %s %s %lu %lu %lu %lu"
 
