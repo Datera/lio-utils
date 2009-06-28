@@ -18,8 +18,8 @@ LIO-IPS-AUTH-MIB DEFINITIONS  ::= BEGIN
     FROM IANA-ADDRESS-FAMILY-NUMBERS-MIB
     ;
 
-sbe          OBJECT IDENTIFIER ::= { enterprises 1055 }
-iscsiProduct OBJECT IDENTIFIER ::= { sbe 10 }
+lio          OBJECT IDENTIFIER ::= { enterprises 1055 }
+iscsiProduct OBJECT IDENTIFIER ::= { lio 10 }
 
 ipsAuthMibModule MODULE-IDENTITY
     LAST-UPDATED  "200602240000Z" -- February 24, 2006

@@ -12,8 +12,8 @@
       NOTIFICATION-GROUP                        FROM SNMPv2-CONF
       SnmpAdminString                  FROM SNMP-FRAMEWORK-MIB;
 
-   sbe          OBJECT IDENTIFIER ::= { enterprises 1055 }
-   iscsiProduct OBJECT IDENTIFIER ::= { sbe 10 }
+   lio          OBJECT IDENTIFIER ::= { enterprises 1055 }
+   iscsiProduct OBJECT IDENTIFIER ::= { lio 10 }
 
    scsiMIB MODULE-IDENTITY
         LAST-UPDATED "200603300000Z"        -- 30th March 2006
