@@ -89,7 +89,7 @@ MIB Support:
  
 Installation of Target MIB module and MIB files:
 
-	The Target MIB module and the MIB files are included in the sbe-mibs 
+	The Target MIB module and the MIB files are included in the lio-mibs 
 	rpm and installed in the following location as part of the Target 
 	installation:
 
@@ -142,7 +142,7 @@ Testing:
 	man page for snmp.conf.
 
 	List all iSCSI related MIB objects:
-	> snmpwalk -v1 -c public localhost sbe
+	> snmpwalk -v1 -c public localhost lio
 
 	Receive Traps and display them:
 	> snmptrapd -f 
