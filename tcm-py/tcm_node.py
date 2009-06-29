@@ -100,8 +100,11 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 		print "Successfully created TCM/ConfigFS storage object: " + cfs_dev_path
 		info_op = "cat " + cfs_dev_path + "/info"
 		os.system(info_op)
+	else:
+		os.rmdir(cfs_dev_path);
+		print "Removed leftover TCM/ConfigFS storage object after failed --createdev"
 
-	return
+	return ret
 
 def tcm_freevirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
