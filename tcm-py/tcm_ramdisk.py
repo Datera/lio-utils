@@ -2,7 +2,7 @@
 
 import os
 import subprocess as sub
-import string
+import string, re
 from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
@@ -37,7 +37,7 @@ def rd_freevirtdev():
 	return
 
 def rd_get_params(path):
-	
+
 	info_file = path + "/info"
 	p = os.open(info_file, 0)
 	value = os.read(p, 1024)
@@ -48,4 +48,11 @@ def rd_get_params(path):
 	params = "rd_pages=" + rd_pages[0]
 	os.close(p)
 
-	return params
+	# Direct configfs reference usage
+#	print "mkdir -p " + path
+#	print "echo " + params + " > " + path + "/control"
+#	print "echo 1 > " + path + "/enable"
+#	return 0
+
+	# rd_pages= parameter for tcm_node --createdev
+	return rd_pages[0]

@@ -37,32 +37,39 @@ def tcm_dump_configfs():
 			
 			# Dump device aka storage object
 			print "#### Parameters for TCM subsystem plugin storage object reference"
-			print "mkdir -p " + dev_root + g
+			
+			# Generate subsystem dependent configfs ops for association to
+		 	# an target_core_mod storage object.
 			result = re.search('pscsi_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_pscsi.pscsi_get_params(dev)
-				print "echo " + params + " > " + dev_root + g + "/control"
+				if params:
+					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 			result = re.search('iblock_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_iblock.iblock_get_params(dev)
-				print "echo " + params + " > " + dev_root + g + "/control"
+				if params:
+					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 			result = re.search('rd_dr_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_ramdisk.rd_get_params(dev)	
-				print "echo " + params + " > " + dev_root + g + "/control"
+				if params:
+					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 			result = re.search('rd_mcp_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_ramdisk.rd_get_params(dev)
-				print "echo " + params + " > " + dev_root + g + "/control"
+				if params:
+					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 			result = re.search('fileio_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_fileio.fd_get_params(dev)
-				print "echo " + params + " > " + dev_root + g + "/control"
+				if params:
+					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 
 			# Dump T10 VP Unit Serial for all non Target_Core_Mod/pSCSI objects
 			result = re.search('pscsi_', f)
@@ -75,8 +82,6 @@ def tcm_dump_configfs():
 				unit_serial = value[off:]
 				print "echo " + unit_serial.rstrip() + " > " + unit_serial_file
 				os.close(p)
-
-			print "echo 1 > " + dev_root + g + "/enable"
 
 			# Dump device attributes
 			print "#### Attributes for " + dev_root + g

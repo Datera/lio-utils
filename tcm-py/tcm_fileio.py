@@ -2,7 +2,7 @@
 
 import os
 import subprocess as sub
-import string
+import string, re 
 from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
@@ -49,4 +49,11 @@ def fd_get_params(path):
 	params = "fd_dev_name=" + fd_dev_name[0] + ",fd_dev_size=" + fd_dev_size[0]
 	os.close(p)
 
+	# Direct configfs reference usage
+#	print "mkdir -p " + path
+#	print "echo " + params + " > " + path + "/control"
+#	print "echo 1 > " + path + "/enable"
+#	return 0
+
+	# fd_dev_name= and fd_dev_size= parameters for tcm_node --createdev
 	return params

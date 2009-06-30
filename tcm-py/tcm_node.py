@@ -97,12 +97,16 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 		ret = tcm_fileio.fd_createvirtdev(cfs_path, plugin_params)
 
 	if not ret:
-		print "Successfully created TCM/ConfigFS storage object: " + cfs_dev_path
 		info_op = "cat " + cfs_dev_path + "/info"
-		os.system(info_op)
+		ret = os.system(info_op)
+		if ret:
+			"Unable to access " + cfs_dev_path + "/info for TCM storage object"
+			os.rmdir(cfs_dev_path);
+			return -1
+
+		print "Successfully created TCM/ConfigFS storage object: " + cfs_dev_path
 	else:
 		os.rmdir(cfs_dev_path);
-		print "Removed leftover TCM/ConfigFS storage object after failed --createdev"
 
 	return ret
 
@@ -166,6 +170,22 @@ def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 
 	return
 
+def tcm_set_udev_path(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		print "TCM/ConfigFS storage object does not exist: " + cfs_dev_path
+		return -1
+
+	udev_path_set_op = "echo -n " + value[1] + " > " + cfs_dev_path + "/udev_path"
+	ret = os.system(udev_path_set_op)
+	if ret:
+		print "Unable to set UDEV path for " + cfs_dev_path
+		return -1
+
+	print "Set UDEV Path: " + value[1] + " for " + cfs_dev_path
+	return
+
 def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -224,15 +244,17 @@ parser = OptionParser()
 parser.add_option("--delhba", action="callback", callback=tcm_delhba, nargs=1,
 		type="string", dest="HBA", help="Delete TCM Host Bus Adapter (HBA)")
 parser.add_option("--createdev", action="callback", callback=tcm_createvirtdev, nargs=2,
-		type="string", dest="HBA/DEV", help="Create TCM Storage Object")
+		type="string", dest="HBA/DEV <params>", help="Create TCM Storage Object")
 parser.add_option("--freedev", action="callback", callback=tcm_freevirtdev, nargs=1,
                 type="string", dest="HBA/DEV", help="Free TCM Storage Object")
 parser.add_option("--listhbas", action="callback", callback=tcm_list_hbas, nargs=0,
 		help="List TCM Host Bus Adapters (HBAs)")
 parser.add_option("--pr", action="callback", callback=tcm_show_persistent_reserve_info, nargs=1,
 		type="string", dest="HBA/DEV", help="Show Persistent Reservation info")
+parser.add_option("--setudevpath", action="callback", callback=tcm_set_udev_path, nargs=2,
+		type="string", dest="HBA/DEV <udev_path>", help="Set UDEV Path Information, only used when --createdev did not contain <udev_path> as parameter")
 parser.add_option("--setunitserial", action="callback", callback=tcm_set_wwn_unit_serial, nargs=2,
-		type="string", dest="HBA/DEV", help="Set T10 EVPD Unit Serial Information")
+		type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information")
 parser.add_option("--unload", action="callback", callback=tcm_unload, nargs=0,
 		help="Unload target_core_mod")
 parser.add_option("--version", action="callback", callback=tcm_version, nargs=0,

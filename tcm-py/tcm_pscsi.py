@@ -2,7 +2,7 @@
 
 import os
 import subprocess as sub
-import string
+import string, re
 from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
@@ -72,7 +72,7 @@ def pscsi_freevirtdev():
 	return
 
 def pscsi_get_params(path):
-
+	
 	info_file = path + "/info"
 	p = os.open(info_file, 0)
 	value = os.read(p, 1024)
@@ -91,8 +91,15 @@ def pscsi_get_params(path):
 	params = "scsi_channel_id=" + channel_id[0] + ",scsi_target_id=" + target_id[0] + ",scsi_lun_id=" + lun_id[0].rstrip()
 	os.close(p)
 
-	return params
+	# Direct configfs reference usage
+#	print "mkdir -p " + path
+#	print "echo " + params + " > " + path + "/control"
+#	print "echo 1 > " + path + "/enable"
+#	return 0
 
+	# scsi_channel_id=, scsi_target_id= and scsi_lun_id= reference for tcm_node --createdev
+	return params
+	
 #parser = OptionParser()
 #parser.add_option("-s", "--scan", action="callback", callback=pscsi_scan_lsscsi,
 #		default=False, help="Scan and register pSCSI HBAs with TCM/ConfigFS")

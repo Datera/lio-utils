@@ -1,44 +1,51 @@
 #!/usr/bin/python
 
-import os
+import os, tempfile
 import subprocess as sub
-import string
+import string, re
 from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
 
 def iblock_createvirtdev(path, params):
-	
 #	print "Calling iblock_createvirtdev: path " + path
 	cfs_path = tcm_root + "/" + path + "/"
 #	print "Calling iblock_createvirtdev: params " + str(params)
-	sysfs_dev = params[0]
-	open_op = "cat " + sysfs_dev
-	block_dev = sub.Popen(open_op, shell=True, stdout=sub.PIPE).stdout
-	line = block_dev.readline()
-	if not line:
-		print "Unable to open SysFS device information"		
+	path = params[0]
+	if not re.search('/dev/', path):
+		print "IBLOCK: Please reference a valid /dev/ block_device"
 		return -1
 
-	new_line = line.split(':')
-	major = new_line[0]
-	minor = new_line[1]
+	udev_path = path.rstrip()
+	# Resolve symbolic links to get major/minor
+	udev_op = "/bin/ls -laL " + udev_path
+	p = sub.Popen(udev_op, shell=True, stdout=sub.PIPE).stdout
+	line = p.readline() 
+	out = line.split(' ');
+	major = out[4]
+	minor = out[5]
+	p.close()
 
-	iblock_params = "major=" + major + ",minor=" + minor
-#	print "iblock_params: " + iblock_params
-
-	control_opt = "echo " + iblock_params.rstrip() + " > " + cfs_path + "/control"
-#	print "control_opt: " + control_opt
-	ret = os.system(control_opt)
-	if ret:
-		print "IBLOCK: createvirtdev failed for control_opt with " + iblock_params
+	if major == "11,":
+		print "Unable to export Linux/SCSI TYPE_CDROM from IBLOCK, please use pSCSI export"
+		return -1
+	if major == "22,":
+		print "Unable to export IDE CDROM from IBLOCK"
 		return -1
 
-	enable_opt = "echo 1 > " +  cfs_path + "enable"	
-#	print "Calling enable_opt " + enable_opt
-	ret = os.system(enable_opt)
+	set_udev_path_op = "echo -n " + udev_path + " > " + cfs_path + "udev_path"
+	ret = os.system(set_udev_path_op)
 	if ret:
-		print "IBLOCK: createvirtdev failed for enable_opt with " + iblock_params
+		print "IBLOCK: Unable to set udev_path in " + cfs_path + " for: " + udev_path
+		return -1
+
+	# Failure here will be handled in tcm_createvirtdev() by checking
+	# /sys/kernel/config/target/core/$HBA/$DEV/info.  A failure case here will return
+	# -ENODEV
+	exec_op = "exec 3<>" + udev_path + "; echo 3 > " + cfs_path + "fd" + "; exec 3>&-"
+	ret = os.system(exec_op)
+	if ret:
+		print "IBLOCK: Unable to access file descriptor for udev_path access: " + udev_path
 		return -1
 
 	return
@@ -47,6 +54,15 @@ def iblock_freevirtdev():
 	return
 
 def iblock_get_params(path):
+	# Reference by udev_path if available	
+	udev_path_file = path + "/udev_path"
+	p = os.open(udev_path_file, 0)
+	value = os.read(p, 1024)
+	if re.search('/dev/', value):
+		os.close(p)
+		return value.rstrip()
+
+	os.close(p)
 
 	info_file = path + "/info"
 	p = os.open(info_file, 0)
@@ -62,5 +78,8 @@ def iblock_get_params(path):
 	params = "major=" + major[0] + ",minor=" + minor[0]
 	os.close(p)
 
-	return params
-
+	# Direct configfs reference usage
+	print "mkdir -p " + path
+	print "echo " + params + " > " + path + "/control"
+	print "echo 1 > " + path + "/enable"
+	return 0
