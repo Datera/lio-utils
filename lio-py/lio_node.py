@@ -65,6 +65,9 @@ def lio_target_add_np(option, opt_str, value, parser):
 	tpgt = str(value[1]);
 	np = str(value[2]);
 
+	if not re.search(':', np)or not re.search('];', np):
+		np = np + ":3260"
+
 	mkdir_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np/" + np
 #	print "mkdir_op: " + mkdir_op
 	ret = os.system(mkdir_op)
