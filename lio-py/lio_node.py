@@ -120,6 +120,25 @@ def lio_target_add_port(option, opt_str, value, parser):
 
 	return
 
+def lio_target_add_tpg(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+
+	tpg_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt
+	if os.path.isdir(tpg_dir):
+		print "iSCSI Target Portal Group directory already exists"
+		return -1
+
+	mkdir_op = "mkdir -p " + tpg_dir
+	ret = os.system(mkdir_op)
+	if ret:
+		print "Unable to create iSCSI Target Portal Group ConfigFS directory"
+		return -1
+	else:
+		print "Successfully created iSCSI Target Portal Group"
+
+	return
+
 def lio_target_del_port(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
@@ -551,6 +570,8 @@ parser.add_option("--addnp", action="callback", callback=lio_target_add_np, narg
 	type="string", dest="TARGET_IQN TPGT IP:PORT", help="Add LIO-Target IPv6 or IPv4 network portal")
 parser.add_option("--addlun", action="callback", callback=lio_target_add_port, nargs=5,
 	type="string", dest="TARGET_IQN TPGT LUN PORT_ALIAS TCM_HBA/DEV ", help="Create LIO-Target Logical Unit")
+parser.add_option("--addtpg", action="callback", callback=lio_target_add_tpg, nargs=2,
+	type="string", dest="TARGET_IQN TPGT", help="Create LIO-Target portal group")
 parser.add_option("--dellunacl", action="callback", callback=lio_target_del_lunacl, nargs=4,
 	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Delete iSCSI Initiator LUN ACL from LIO-Target Portal Group LUN")
 parser.add_option("--delnodeacl", action="callback", callback=lio_target_del_nodeacl, nargs=3,
