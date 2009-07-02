@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import os
+import os, sys
 import subprocess as sub
 import string
 import re
@@ -14,6 +14,10 @@ tcm_root = "/sys/kernel/config/target/core"
 
 def tcm_cat(fname):
     return file(fname).xreadlines()
+
+def tcm_err(msg):
+	print msg
+	sys.exit(1)
 
 def tcm_get_cfs_prefix(arg):
 	path = "/sys/kernel/config/target/core/" + arg
@@ -35,8 +39,7 @@ def tcm_delhba(option, opt_str, value, parser):
 
 	ret = os.rmdir(hba_path)
 	if ret:
-		print "Unable to delete TCM HBA: " + hba_path
-		return -1
+		tcm_err("Unable to delete TCM HBA: " + hba_path)
 	else:
 		print "Successfully released TCM HBA: " + hba_path
 
@@ -54,15 +57,13 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 		if not ret:
 			print "Successfully added TCM/ConfigFS HBA: " + hba_cfs
 		else:
-			print "Unable to create TCM/ConfigFS HBA: " + cfs_hba_path
-			return -1
+			tcm_err("Unable to create TCM/ConfigFS HBA: " + cfs_hba_path)
 
 	dev_vfs_alias = cfs_path_tmp[1]
 	print " ConfigFS Device Alias: " + dev_vfs_alias
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	if (os.path.isdir(cfs_dev_path)):
-		print "TCM/ConfigFS storage object already exists: " + cfs_dev_path
-		return -1
+		tcm_err("TCM/ConfigFS storage object already exists: " + cfs_dev_path)
 
 	cfs_path = cfs_path_tmp[0] + "/" + cfs_path_tmp[1]
 
@@ -73,7 +74,7 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 	
 	ret = os.mkdir(cfs_dev_path)
 	if ret:
-		print "Failed to create ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret
+		tcm_err("Failed to create ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret)
 
 #	Calls into submodules depending on target_core_mod subsystem plugin
 	ret = 0
@@ -100,15 +101,15 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 		info_op = "cat " + cfs_dev_path + "/info"
 		ret = os.system(info_op)
 		if ret:
-			"Unable to access " + cfs_dev_path + "/info for TCM storage object"
-			os.rmdir(cfs_dev_path);
-			return -1
+			os.rmdir(cfs_dev_path)
+			tcm_err("Unable to access " + cfs_dev_path + "/info for TCM storage object")
 
 		print "Successfully created TCM/ConfigFS storage object: " + cfs_dev_path
 	else:
 		os.rmdir(cfs_dev_path);
+		tcm_err("Unable to register TCM/ConfigFS storage object: " + cfs_dev_path)
 
-	return ret
+	return
 
 def tcm_freevirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -120,14 +121,13 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	if (os.path.isdir(cfs_dev_path) == False):
-		print "TCM/ConfigFS storage object does not exist: " + cfs_dev_path
-		return -1
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	ret = os.rmdir(cfs_dev_path)
 	if not ret:
 		print "Successfully released TCM/ConfigFS storage object: " + cfs_dev_path
 	else:
-		print "Failed to release ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret
+		tcm_err("Failed to release ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret)
 
 	return
 
@@ -159,14 +159,12 @@ def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	if (os.path.isdir(cfs_dev_path) == False):
-		print "TCM/ConfigFS storage object does not exist: " + cfs_dev_path
-		return -1
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	pr_show_op = "cat " + cfs_dev_path + "/pr/*"
 	ret = os.system(pr_show_op)
 	if ret:
-		print "Unable to disable storage object persistent reservation info"
-		return -1
+		tcm_err("Unable to disable storage object persistent reservation info")
 
 	return
 
@@ -174,14 +172,12 @@ def tcm_set_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	if (os.path.isdir(cfs_dev_path) == False):
-		print "TCM/ConfigFS storage object does not exist: " + cfs_dev_path
-		return -1
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	udev_path_set_op = "echo -n " + value[1] + " > " + cfs_dev_path + "/udev_path"
 	ret = os.system(udev_path_set_op)
 	if ret:
-		print "Unable to set UDEV path for " + cfs_dev_path
-		return -1
+		tcm_err("Unable to set UDEV path for " + cfs_dev_path)
 
 	print "Set UDEV Path: " + value[1] + " for " + cfs_dev_path
 	return
@@ -190,14 +186,12 @@ def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	if (os.path.isdir(cfs_dev_path) == False):
-		print "TCM/ConfigFS storage object does not exist: " + cfs_dev_path
-		return -1
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	wwn_show_op = "echo " + value[1] + " > " + cfs_dev_path + "/wwn/vpd_unit_serial"
 	ret = os.system(wwn_show_op)
 	if ret:
-		print "Unable to set T10 WWN Unit Serial for " + cfs_dev_path
-		return -1
+		tcm_err("Unable to set T10 WWN Unit Serial for " + cfs_dev_path)
 
 	print "Set T10 WWN Unit Serial for " + cfs_unsplit + " to: " + value[1]
 	return
@@ -206,14 +200,12 @@ def tcm_show_wwn_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	if (os.path.isdir(cfs_dev_path) == False):
-		print "TCM/ConfigFS storage object does not exist: " + cfs_dev_path
-		return -1
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	wwn_show_op = "cat " + cfs_dev_path + "/wwn/*"
 	ret = os.system(wwn_show_op)
 	if ret:
-		print "Unable to disable storage object WWN info"
-		return -1
+		tcm_err("Unable to disable storage object WWN info")
 
 	return
 
@@ -230,8 +222,7 @@ def tcm_unload(option, opt_str, value, parser):
 	rmmod_op = "rmmod target_core_mod"
 	ret = os.system(rmmod_op)
 	if ret:
-		print "Unable to rmmod target_core_mod"
-		return -1
+		tcm_err("Unable to rmmod target_core_mod")
 
 	return
 
