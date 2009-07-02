@@ -626,13 +626,13 @@ def main():
 	parser.add_option("--demomode", action="callback", callback=lio_target_tpg_demomode, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Enable DemoMode for LIO-Target Portal Group")
 	parser.add_option("--disableauth", action="callback", callback=lio_target_tpg_disableauth, nargs=2,
-		type="string", dest="TARGET_IQN TPGT", help="Disable iSCSI Authentication for LIO-Target Portal Group")
+		type="string", dest="TARGET_IQN TPGT", help="Disable iSCSI Authentication for LIO-Target Portal Group (Enabled by default)")
 	parser.add_option("--disablelunwp", action="callback", callback=lio_target_disable_lunwp, nargs=4,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Clear Write Protect bit for iSCSI Initiator LUN ACL")
 	parser.add_option("--disabletpg", action="callback", callback=lio_target_disable_tpg, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Disable LIO-Target Portal Group")
 	parser.add_option("--enableauth", action="callback", callback=lio_target_enable_auth, nargs=2,
-		type="string", dest="TARGET_IQN TPGT", help="Enable iSCSI Authentication for LIO-Target Portal Group")
+		type="string", dest="TARGET_IQN TPGT", help="Enable iSCSI Authentication for LIO-Target Portal Group (Enabled by default)")
 	parser.add_option("--enablelunwp", action="callback", callback=lio_target_enable_lunwp, nargs=4,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Set Write Protect bit for iSCSI Initiator LUN ACL")
 	parser.add_option("--enabletpg", action="callback", callback=lio_target_enable_tpg, nargs=2,
