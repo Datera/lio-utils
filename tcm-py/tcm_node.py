@@ -231,27 +231,36 @@ def tcm_version(option, opt_str, value, parser):
 	os.system("cat /sys/kernel/config/target/version")
 	return
 
-parser = OptionParser()
-parser.add_option("--delhba", action="callback", callback=tcm_delhba, nargs=1,
-		type="string", dest="HBA", help="Delete TCM Host Bus Adapter (HBA)")
-parser.add_option("--createdev", action="callback", callback=tcm_createvirtdev, nargs=2,
-		type="string", dest="HBA/DEV <params>", help="Create TCM Storage Object")
-parser.add_option("--freedev", action="callback", callback=tcm_freevirtdev, nargs=1,
-                type="string", dest="HBA/DEV", help="Free TCM Storage Object")
-parser.add_option("--listhbas", action="callback", callback=tcm_list_hbas, nargs=0,
-		help="List TCM Host Bus Adapters (HBAs)")
-parser.add_option("--pr", action="callback", callback=tcm_show_persistent_reserve_info, nargs=1,
-		type="string", dest="HBA/DEV", help="Show Persistent Reservation info")
-parser.add_option("--setudevpath", action="callback", callback=tcm_set_udev_path, nargs=2,
-		type="string", dest="HBA/DEV <udev_path>", help="Set UDEV Path Information, only used when --createdev did not contain <udev_path> as parameter")
-parser.add_option("--setunitserial", action="callback", callback=tcm_set_wwn_unit_serial, nargs=2,
-		type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information")
-parser.add_option("--unload", action="callback", callback=tcm_unload, nargs=0,
-		help="Unload target_core_mod")
-parser.add_option("--version", action="callback", callback=tcm_version, nargs=0,
-		help="Display target_core_mod version information")
-parser.add_option("--wwn", action="callback", callback=tcm_show_wwn_info, nargs=1,
-		type="string", dest="HBA/DEV", help="Show WWN info")
+def main():
 
-parser.parse_args()
+	parser = OptionParser()
+	parser.add_option("--delhba", action="callback", callback=tcm_delhba, nargs=1,
+			type="string", dest="HBA", help="Delete TCM Host Bus Adapter (HBA)")
+	parser.add_option("--createdev", action="callback", callback=tcm_createvirtdev, nargs=2,
+			type="string", dest="HBA/DEV <params>", help="Create TCM Storage Object")
+	parser.add_option("--freedev", action="callback", callback=tcm_freevirtdev, nargs=1,
+			type="string", dest="HBA/DEV", help="Free TCM Storage Object")
+	parser.add_option("--listhbas", action="callback", callback=tcm_list_hbas, nargs=0,
+			help="List TCM Host Bus Adapters (HBAs)")
+	parser.add_option("--pr", action="callback", callback=tcm_show_persistent_reserve_info, nargs=1,
+			type="string", dest="HBA/DEV", help="Show Persistent Reservation info")
+	parser.add_option("--setudevpath", action="callback", callback=tcm_set_udev_path, nargs=2,
+			type="string", dest="HBA/DEV <udev_path>", help="Set UDEV Path Information, only used when --createdev did not contain <udev_path> as parameter")
+	parser.add_option("--setunitserial", action="callback", callback=tcm_set_wwn_unit_serial, nargs=2,
+			type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information")
+	parser.add_option("--unload", action="callback", callback=tcm_unload, nargs=0,
+			help="Unload target_core_mod")
+	parser.add_option("--version", action="callback", callback=tcm_version, nargs=0,
+			help="Display target_core_mod version information")
+	parser.add_option("--wwn", action="callback", callback=tcm_show_wwn_info, nargs=1,
+			type="string", dest="HBA/DEV", help="Show WWN info")
 
+	(options, args) = parser.parse_args()
+	if len(sys.argv) == 1:
+		parser.print_help()
+		sys.exit(0)
+	elif not re.search('--', sys.argv[1]):
+		tcm_err("Unknown CLI option: " + sys.argv[1])
+
+if __name__ == "__main__":
+	main()
