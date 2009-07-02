@@ -207,6 +207,19 @@ def lio_target_tpg_disableauth(option, opt_str, value, parser):
 
 	return
 
+def lio_target_tpg_demomode(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+
+	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/generate_node_acls"
+	ret = os.system(enable_op)
+	if ret:
+		lio_err("Unable to disable Initiator ACL mode (Enable DemoMode) on iSCSI Target Portal Group: " + iqn + " " + tpgt)
+	else:
+		print "Successfully disabled Initiator ACL mode (Enabled DemoMode) on iSCSI Target Portal Group: " + iqn + " " + tpgt
+
+	return
+
 def lio_target_disable_lunwp(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
@@ -219,19 +232,6 @@ def lio_target_disable_lunwp(option, opt_str, value, parser):
 		lio_err("Unable to disable WriteProtect for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully disabled WRITE PROTECT for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
-
-	return
-
-def lio_target_tpg_demomode(option, opt_str, value, parser):
-	iqn = str(value[0]);
-	tpgt = str(value[1]);
-
-	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/generate_node_acls"
-	ret = os.system(enable_op)
-	if ret:
-		lio_err("Unable to enable DemoMode on iSCSI Target Portal Group: " + iqn + " " + tpgt)
-	else:
-		print "Successfully enabled DemoMode on iSCSI Target Portal Group: " + iqn + " " + tpgt
 
 	return
 
@@ -287,6 +287,19 @@ def lio_target_disable_tpg(option, opt_str, value, parser):
 		print "Successfully disabled iSCSI Target Portal Group: " + iqn + " " + tpgt
 
 	return
+
+def lio_target_enableaclmode(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+
+	enable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/generate_node_acls"
+	ret = os.system(enable_op)
+	if ret:
+		lio_err("Unable to enable Initiator ACL mode (Disabled DemoMode) on iSCSI Target Portal Group: " + iqn + " " + tpgt)
+        else:
+                print "Successfully enabled Initiator ACL mode (Disabled DemoMode) on iSCSI Target Portal Group: " + iqn + " " + tpgt
+        return
+
 
 def lio_target_add_lunacl(option, opt_str, value, parser):
 	iqn = str(value[0]);
@@ -623,14 +636,16 @@ def main():
 		type="string", dest="TARGET_IQN TPGT LUN", help="Delete LIO-Target Logical Unit")
 	parser.add_option("--deltpg", action="callback", callback=lio_target_del_tpg, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Delete LIO-Target Portal Group")
-	parser.add_option("--demomode", action="callback", callback=lio_target_tpg_demomode, nargs=2,
-		type="string", dest="TARGET_IQN TPGT", help="Enable DemoMode for LIO-Target Portal Group")
+	parser.add_option("--demomode", "--permissive", action="callback", callback=lio_target_tpg_demomode, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="Disable all iSCSI Initiator ACL requirements (enable DemoMode) for LIO-Target Portal Group (Enabled by default)")
 	parser.add_option("--disableauth", action="callback", callback=lio_target_tpg_disableauth, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Disable iSCSI Authentication for LIO-Target Portal Group (Enabled by default)")
 	parser.add_option("--disablelunwp", action="callback", callback=lio_target_disable_lunwp, nargs=4,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Clear Write Protect bit for iSCSI Initiator LUN ACL")
 	parser.add_option("--disabletpg", action="callback", callback=lio_target_disable_tpg, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Disable LIO-Target Portal Group")
+	parser.add_option("--enableaclmode", action="callback", callback=lio_target_enableaclmode, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="Enable iSCSI Initiator ACL requirement mode for LIO-Target Portal Group (Enabled by default)")
 	parser.add_option("--enableauth", action="callback", callback=lio_target_enable_auth, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Enable iSCSI Authentication for LIO-Target Portal Group (Enabled by default)")
 	parser.add_option("--enablelunwp", action="callback", callback=lio_target_enable_lunwp, nargs=4,
