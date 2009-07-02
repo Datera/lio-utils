@@ -15,17 +15,17 @@ def rd_createvirtdev(path, params):
 	rd_pages = params[0]
 
 	rd_params = "rd_pages=" + rd_pages
-	print "rd_params: " + rd_params
+#	print "rd_params: " + rd_params
 
 	control_opt = "echo " + rd_params.rstrip() + " > " + cfs_path + "/control"
-	print "control_opt: " + control_opt
+#	print "control_opt: " + control_opt
 	ret = os.system(control_opt)
 	if ret:
 		print "RAMDISK: createvirtdev failed for control_opt with " + rd_params
 		return -1
 
 	enable_opt = "echo 1 > " +  cfs_path + "enable"	
-	print "Calling enable_opt " + enable_opt
+#	print "Calling enable_opt " + enable_opt
 	ret = os.system(enable_opt)
 	if ret:
 		print "RAMDISK: createvirtdev failed for enable_opt with " + rd_params
