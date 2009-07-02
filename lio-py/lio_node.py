@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import os
+import os, sys
 import subprocess as sub
 import string
 import re
@@ -7,6 +7,10 @@ from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
 lio_root = "/sys/kernel/config/target/iscsi"
+
+def lio_err(msg):
+	print msg
+	sys.exit(1)
 
 def lio_target_del_iqn(option, opt_str, value, parser):
 	iqn = str(value);
@@ -41,10 +45,12 @@ def lio_target_del_iqn(option, opt_str, value, parser):
 		lio_target_del_tpg(None, None, tpg_val, None)   
 
 	rmdir_op = "rmdir " + lio_root + "/" + iqn
-	print "rmdir_op: " + rmdir_op
+#	print "rmdir_op: " + rmdir_op
 	ret = os.system(rmdir_op)
 	if not ret:
 		print "Successfully released iSCSI Target Endpoint IQN: " + iqn
+	else:
+		lio_err("Unable to release iSCSI Target Endpoint IQN: " + iqn)
 
 	return
 
@@ -53,10 +59,12 @@ def lio_target_del_tpg(option, opt_str, value, parser):
 	tpgt = str(value[1]);
 
 	rmdir_op = "rmdir " + lio_root + "/" + iqn + "/tpgt_" + tpgt
-	print "rmdir_op: " + rmdir_op
+#	print "rmdir_op: " + rmdir_op
 	ret = os.system(rmdir_op)
 	if not ret:
 		print "Successfully released iSCSI Target Portal Group: " + iqn + " TPGT: " + tpgt
+	else:
+		lio_err("Unable to release iSCSI Target Portal Group: " + iqn + " TPGT: " + tpgt)
 	
 	return
 
@@ -73,6 +81,8 @@ def lio_target_add_np(option, opt_str, value, parser):
 	ret = os.system(mkdir_op)
 	if not ret:
 		print "Successfully created network portal: " + np + " created " + iqn + " TPGT: " + tpgt 
+	else:
+		lio_err("Unable to create network portal: " + np + " created " + iqn + " TPGT: " + tpgt)
 
 	return
 
@@ -82,10 +92,12 @@ def lio_target_del_np(option, opt_str, value, parser):
 	np = str(value[2]);
 
 	rmdir_op = "rmdir " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np/" + np
-	print "rmdir_op: " + rmdir_op
+#	print "rmdir_op: " + rmdir_op
 	ret = os.system(rmdir_op)
 	if not ret:
 		print "Successfully released network portal: " + np + " created " + iqn + " TPGT: " + tpgt
+	else:
+		lio_err("Unable to release network portal: " + np + " created " + iqn + " TPGT: " + tpgt)
 
 	return
 
@@ -98,15 +110,13 @@ def lio_target_add_port(option, opt_str, value, parser):
 
 	lun_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
 	if os.path.isdir(lun_dir):
-		print "iSCSI Target Logical Unit ConfigFS directory already exists"
-		return -1
+		lio_err("iSCSI Target Logical Unit ConfigFS directory already exists")
 
 	mkdir_op = "mkdir -p " + lun_dir
 #	print "mkdir_op: " + mkdir_op
 	ret = os.system(mkdir_op)
 	if ret:
-		print "Unable to create iSCSI Target Logical Unit ConfigFS directory"
-		return -1
+		lio_err("Unable to create iSCSI Target Logical Unit ConfigFS directory")
 
 	port_src = tcm_root + "/" + tcm_obj
 	port_dst = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun + "/" + port_name
@@ -117,6 +127,7 @@ def lio_target_add_port(option, opt_str, value, parser):
 		print "Successfully created iSCSI Target Logical Unit"
 	else:
 		os.rmdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun)
+		lio_err("Unable to create iSCSI Target Logical Unit symlink")
 
 	return
 
@@ -126,14 +137,12 @@ def lio_target_add_tpg(option, opt_str, value, parser):
 
 	tpg_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt
 	if os.path.isdir(tpg_dir):
-		print "iSCSI Target Portal Group directory already exists"
-		return -1
+		lio_err("iSCSI Target Portal Group directory already exists")
 
 	mkdir_op = "mkdir -p " + tpg_dir
 	ret = os.system(mkdir_op)
 	if ret:
-		print "Unable to create iSCSI Target Portal Group ConfigFS directory"
-		return -1
+		lio_err("Unable to create iSCSI Target Portal Group ConfigFS directory")
 	else:
 		print "Successfully created iSCSI Target Portal Group"
 
@@ -155,13 +164,15 @@ def lio_target_del_port(option, opt_str, value, parser):
 #		print "del_portunlink_op: " + unlink_op
 		ret = os.system(unlink_op)
 		if ret:
-			print "Unable to unlink iSCSI Target Logical Unit"
+			lio_err("Unable to unlink iSCSI Target Logical Unit")
 
 	rmdir_op= "rmdir " + lun_dir
 #	print "del_port rmdir_op: " + rmdir_op
 	ret = os.system(rmdir_op);
 	if not ret:
 		print "Successfully deleted iSCSI Target Logical Unit"
+	else:
+		lio_err("Unable to rmdir iSCSI Target Logical Unit configfs directory")
 
 	return
 
@@ -172,7 +183,7 @@ def lio_target_tpg_disableauth(option, opt_str, value, parser):
 	enable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/authentication"
 	ret = os.system(enable_op)
 	if ret:
-		print "Unable to disable iSCSI Authentication on iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to disable iSCSI Authentication on iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully disabled iSCSI Authentication on iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -187,7 +198,7 @@ def lio_target_disable_lunwp(option, opt_str, value, parser):
 	disable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/write_protect"
 	ret = os.system(disable_op)
 	if ret:
-		print "Unable to disable WriteProtect for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to disable WriteProtect for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully disabled WRITE PROTECT for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -200,7 +211,7 @@ def lio_target_tpg_demomode(option, opt_str, value, parser):
 	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/generate_node_acls"
 	ret = os.system(enable_op)
 	if ret:
-		print "Unable to enable DemoMode on iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to enable DemoMode on iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully enabled DemoMode on iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -215,7 +226,7 @@ def lio_target_enable_lunwp(option, opt_str, value, parser):
 	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/write_protect"
 	ret = os.system(enable_op)
 	if ret:
-		print "Unable to enable WriteProtect for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to enable WriteProtect for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully enabled WRITE PROTECT for Mapped LUN: " + mapped_lun + " for " + initiator_iqn + " on iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -228,7 +239,7 @@ def lio_target_enable_tpg(option, opt_str, value, parser):
 	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/enable"
 	ret = os.system(enable_op)
 	if ret:
-		print "Unable to enable iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to enable iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully enabled iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -241,7 +252,7 @@ def lio_target_disable_tpg(option, opt_str, value, parser):
 	disable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/enable"
 	ret = os.system(disable_op)
 	if ret:
-		print "Unable to disable iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to disable iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully disabled iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -257,14 +268,13 @@ def lio_target_add_lunacl(option, opt_str, value, parser):
 	mkdir_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/lun_" + mapped_lun
 	ret = os.system(mkdir_op)
 	if ret:
-		print "Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
 	addlunacl_op = "ln -s " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + tpg_lun + " " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/lun_" + mapped_lun + "/lio_lun"
 
 	ret = os.system(addlunacl_op)
 	if ret:
-		print "Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
-		return 1
+		lio_err("Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully added iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -285,14 +295,12 @@ def lio_target_del_lunacl(option, opt_str, value, parser):
 #		print "unlink_op: " + unlink_op
 		ret = os.system(unlink_op)
 		if ret:
-			print "Unable to unlink iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
-			return 1
+			lio_err("Unable to unlink iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 		
 	dellunacl_op = "rmdir " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/lun_" + mapped_lun
 	ret = os.system(dellunacl_op)
 	if ret:
-		print "Unable to delete iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
-		return 1
+		lio_err("Unable to delete iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully deleted iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -306,7 +314,7 @@ def lio_target_add_nodeacl(option, opt_str, value, parser):
 	addnodeacl_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn
 	ret = os.system(addnodeacl_op)
 	if ret:
-		print "Unable to add iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to add iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully added iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -329,7 +337,7 @@ def lio_target_del_nodeacl(option, opt_str, value, parser):
 	delnodeacl_op = "rmdir " + nacl_dir
 	ret = os.system(delnodeacl_op)
 	if ret:
-		print "Unable to delete iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to delete iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully deleted iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -344,7 +352,7 @@ def lio_target_set_node_tcq(option, opt_str, value, parser):
 	setnodetcq_op = "echo " + depth + " > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/cmdsn_depth"
 	ret = os.system(setnodetcq_op)
 	if ret:
-		print "Unable to set TCQ: " + depth + " for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_err("Unable to set TCQ: " + depth + " for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully set TCQ: " + depth + " for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -357,8 +365,7 @@ def lio_target_show_node_tcq(option, opt_str, value, parser):
 
 	nacl = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn
 	if not os.path.isdir(nacl):
-		print "iSCSI Initiator ACL: " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt
-		return 1	
+		lio_err("iSCSI Initiator ACL: " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
 	tcq_depth_file = nacl + "/cmdsn_depth"
 	p = os.open(tcq_depth_file, 0)
