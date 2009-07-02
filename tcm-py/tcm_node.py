@@ -149,8 +149,16 @@ def tcm_list_hbas(option, opt_str, value, parser):
 				continue
 			p = os.open(dev_root + "/" + dev + "/info", 0)
 			value = os.read(p, 256)
+			u = os.open(dev_root + "/" + dev + "/udev_path", 0)
+			udev_path = os.read(u, 256)
+			if udev_path:
+				udev_str = "udev_path: " + udev_path.rstrip()
+			else:
+				udev_str = "udev_path: N/A"
+
 			print "        \-------> " + dev
 			print "        " + value.rstrip()
+			print "        " + udev_str
 			os.close(p)
 
 	return
@@ -194,6 +202,19 @@ def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 		tcm_err("Unable to set T10 WWN Unit Serial for " + cfs_dev_path)
 
 	print "Set T10 WWN Unit Serial for " + cfs_unsplit + " to: " + value[1]
+	return
+
+def tcm_show_udev_path(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	udev_path_show_op = "cat " + cfs_dev_path + "/udev_path"
+	ret = os.system(udev_path_show_op)
+	if ret:
+		tcm_err("Unable to show UDEV path for " + cfs_dev_path)
+
 	return
 
 def tcm_show_wwn_info(option, opt_str, value, parser):
@@ -248,6 +269,8 @@ def main():
 			type="string", dest="HBA/DEV <udev_path>", help="Set UDEV Path Information, only used when --createdev did not contain <udev_path> as parameter")
 	parser.add_option("--setunitserial", action="callback", callback=tcm_set_wwn_unit_serial, nargs=2,
 			type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information")
+	parser.add_option("--udevpath", action="callback", callback=tcm_show_udev_path, nargs=1,
+			type="string", dest="HBA/DEV", help="Show UDEV Path Information for TCM storage object")
 	parser.add_option("--unload", action="callback", callback=tcm_unload, nargs=0,
 			help="Unload target_core_mod")
 	parser.add_option("--version", action="callback", callback=tcm_version, nargs=0,
