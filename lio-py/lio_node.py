@@ -73,8 +73,26 @@ def lio_target_add_np(option, opt_str, value, parser):
 	tpgt = str(value[1]);
 	np = str(value[2]);
 
-	if not re.search(':', np)or not re.search('];', np):
+	# Append default iSCSI Port is non is given.
+	if re.search(']', np)and not re.search(']:', np):
 		np = np + ":3260"
+	elif re.search(':\\Z', np):
+		np = np + "3260"
+	elif not re.search(':', np):
+		np = np + ":3260"
+
+	# Extract the iSCSI port and make sure it is a valid u16 value
+	if re.search(']:', np):
+		off = np.index(']:')
+		off += 2 
+		port = int(np[off:])
+	else:
+		off = np.index(':')
+		off += 1
+		port = int(np[off:])
+
+	if port == 0 or port > 65535:
+		lio_err("Illegal port value: " + str(port) + " for iSCSI network portal")
 
 	mkdir_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np/" + np
 #	print "mkdir_op: " + mkdir_op
