@@ -45,6 +45,21 @@ def tcm_delhba(option, opt_str, value, parser):
 
 	return
 
+def tcm_generate_uuid_for_unit_serial(cfs_dev_path):
+	uuidgen_op = 'uuidgen'
+	p = sub.Popen(uuidgen_op, shell=True, stdout=sub.PIPE).stdout
+	uuid = p.readline()
+	p.close()
+
+	if not uuid:
+		print "Unable to generate UUID using uuidgen, continuing anyway"
+		return
+
+	swus_val = [cfs_dev_path,uuid.rstrip()]
+	tcm_set_wwn_unit_serial(None, None, swus_val, None)
+
+	return
+
 def tcm_createvirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_path_tmp = cfs_unsplit.split('/')
@@ -78,6 +93,7 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 
 #	Calls into submodules depending on target_core_mod subsystem plugin
 	ret = 0
+	gen_uuid = 0
 	result = re.search('pscsi_', hba_cfs)
 	if result:
 		ret = tcm_pscsi.pscsi_createvirtdev(cfs_path, plugin_params)
@@ -86,15 +102,19 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 		print "stgt"
 	result = re.search('iblock_', hba_cfs)
 	if result:
+		gen_uuid = 1
 		ret = tcm_iblock.iblock_createvirtdev(cfs_path, plugin_params)
 	result = re.search('rd_dr_', hba_cfs)
 	if result:
+		gen_uuid = 1
 		ret = tcm_ramdisk.rd_createvirtdev(cfs_path, plugin_params)
 	result = re.search('rd_mcp_', hba_cfs)
 	if result:
+		gen_uuid = 1
 		ret = tcm_ramdisk.rd_createvirtdev(cfs_path, plugin_params)
 	result = re.search('fileio_', hba_cfs)
 	if result:
+		gen_uuid = 1
 		ret = tcm_fileio.fd_createvirtdev(cfs_path, plugin_params)
 
 	if not ret:
@@ -103,6 +123,9 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 		if ret:
 			os.rmdir(cfs_dev_path)
 			tcm_err("Unable to access " + cfs_dev_path + "/info for TCM storage object")
+
+		if gen_uuid:
+                        tcm_generate_uuid_for_unit_serial(cfs_path)
 
 		print "Successfully created TCM/ConfigFS storage object: " + cfs_dev_path
 	else:
