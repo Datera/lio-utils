@@ -586,57 +586,68 @@ def lio_target_version(option, opt_str, value, parser):
 	os.system("cat /sys/kernel/config/target/iscsi/lio_version")
 	return
 
-parser = OptionParser()
-parser.add_option("--addlunacl", action="callback", callback=lio_target_add_lunacl, nargs=5,
-	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN TPG_LUN MAPPED_LUN", help="Add iSCSI Initiator LUN ACL to LIO-Target Portal Group LUN")
-parser.add_option("--addnodeacl", action="callback", callback=lio_target_add_nodeacl, nargs=3,
-	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Add iSCSI Initiator ACL to LIO-Target Portal Group")
-parser.add_option("--addnp", action="callback", callback=lio_target_add_np, nargs=3,
-	type="string", dest="TARGET_IQN TPGT IP:PORT", help="Add LIO-Target IPv6 or IPv4 network portal")
-parser.add_option("--addlun", action="callback", callback=lio_target_add_port, nargs=5,
-	type="string", dest="TARGET_IQN TPGT LUN PORT_ALIAS TCM_HBA/DEV ", help="Create LIO-Target Logical Unit")
-parser.add_option("--addtpg", action="callback", callback=lio_target_add_tpg, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="Create LIO-Target portal group")
-parser.add_option("--dellunacl", action="callback", callback=lio_target_del_lunacl, nargs=4,
-	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Delete iSCSI Initiator LUN ACL from LIO-Target Portal Group LUN")
-parser.add_option("--delnodeacl", action="callback", callback=lio_target_del_nodeacl, nargs=3,
-	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Delete iSCSI Initiator ACL from LIO-Target Portal Group")
-parser.add_option("--delnp", action="callback", callback=lio_target_del_np, nargs=3,
-	type="string", dest="TARGET_IQN TPGT IP:PORT", help="Delete LIO-Target IPv6 or IPv4 network portal")
-parser.add_option("--deliqn", action="callback", callback=lio_target_del_iqn, nargs=1,
-	type="string", dest="TARGET_IQN", help="Delete LIO-Target IQN Endpoint")
-parser.add_option("--dellun",  action="callback", callback=lio_target_del_port, nargs=3,
-	type="string", dest="TARGET_IQN TPGT LUN", help="Delete LIO-Target Logical Unit")
-parser.add_option("--deltpg", action="callback", callback=lio_target_del_tpg, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="Delete LIO-Target Portal Group")
-parser.add_option("--demomode", action="callback", callback=lio_target_tpg_demomode, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="Enable DemoMode for LIO-Target Portal Group")
-parser.add_option("--disableauth", action="callback", callback=lio_target_tpg_disableauth, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="Disable iSCSI Authentication for LIO-Target Portal Group")
-parser.add_option("--disablelunwp", action="callback", callback=lio_target_disable_lunwp, nargs=4,
-	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Clear Write Protect bit for iSCSI Initiator LUN ACL")
-parser.add_option("--disabletpg", action="callback", callback=lio_target_disable_tpg, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="Disable LIO-Target Portal Group")
-parser.add_option("--enablelunwp", action="callback", callback=lio_target_enable_lunwp, nargs=4,
-	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Set Write Protect bit for iSCSI Initiator LUN ACL")
-parser.add_option("--enabletpg", action="callback", callback=lio_target_enable_tpg, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="Enable LIO-Target Portal Group")
-parser.add_option("--listendpoints", action="callback", callback=lio_target_list_endpoints, nargs=0,
-	help="List iSCSI Target Endpoints")
-parser.add_option("--listlunacls", action="callback", callback=lio_target_list_lunacls, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator LUN ACLs for LIO-Target Portal Group")
-parser.add_option("--listnodeacls", action="callback", callback=lio_target_list_nodeacls, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator ACLs for LIO-Target Portal Group")
-parser.add_option("--listnps", action="callback", callback=lio_target_list_nps, nargs=2,
-	type="string", dest="TARGET_IQN TPGT", help="List LIO-Target Portal Group Network Portals")
-parser.add_option("--listtargetnames", action="callback", callback=lio_target_list_targetnames, nargs=0,
-	help="List iSCSI Target Names")
-parser.add_option("--setnodetcq", action="callback", callback=lio_target_set_node_tcq, nargs=4,
-	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN DEPTH", help="Set iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
-parser.add_option("--shownodetcq", action="callback", callback=lio_target_show_node_tcq, nargs=3,
-	type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
-parser.add_option("--unload", action="callback", callback=lio_target_unload, nargs=0,
-	help="Unload LIO-Target")
-parser.add_option("--version", action="callback", callback=lio_target_version, nargs=0,
-	help="Display LIO-Target version information")
-parser.parse_args()
+def main():
+
+	parser = OptionParser()
+	parser.add_option("--addlunacl", action="callback", callback=lio_target_add_lunacl, nargs=5,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN TPG_LUN MAPPED_LUN", help="Add iSCSI Initiator LUN ACL to LIO-Target Portal Group LUN")
+	parser.add_option("--addnodeacl", action="callback", callback=lio_target_add_nodeacl, nargs=3,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Add iSCSI Initiator ACL to LIO-Target Portal Group")
+	parser.add_option("--addnp", action="callback", callback=lio_target_add_np, nargs=3,
+		type="string", dest="TARGET_IQN TPGT IP:PORT", help="Add LIO-Target IPv6 or IPv4 network portal")
+	parser.add_option("--addlun", action="callback", callback=lio_target_add_port, nargs=5,
+		type="string", dest="TARGET_IQN TPGT LUN PORT_ALIAS TCM_HBA/DEV ", help="Create LIO-Target Logical Unit")
+	parser.add_option("--addtpg", action="callback", callback=lio_target_add_tpg, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="Create LIO-Target portal group")
+	parser.add_option("--dellunacl", action="callback", callback=lio_target_del_lunacl, nargs=4,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Delete iSCSI Initiator LUN ACL from LIO-Target Portal Group LUN")
+	parser.add_option("--delnodeacl", action="callback", callback=lio_target_del_nodeacl, nargs=3,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Delete iSCSI Initiator ACL from LIO-Target Portal Group")
+	parser.add_option("--delnp", action="callback", callback=lio_target_del_np, nargs=3,
+		type="string", dest="TARGET_IQN TPGT IP:PORT", help="Delete LIO-Target IPv6 or IPv4 network portal")
+	parser.add_option("--deliqn", action="callback", callback=lio_target_del_iqn, nargs=1,
+		type="string", dest="TARGET_IQN", help="Delete LIO-Target IQN Endpoint")
+	parser.add_option("--dellun",  action="callback", callback=lio_target_del_port, nargs=3,
+		type="string", dest="TARGET_IQN TPGT LUN", help="Delete LIO-Target Logical Unit")
+	parser.add_option("--deltpg", action="callback", callback=lio_target_del_tpg, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="Delete LIO-Target Portal Group")
+	parser.add_option("--demomode", action="callback", callback=lio_target_tpg_demomode, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="Enable DemoMode for LIO-Target Portal Group")
+	parser.add_option("--disableauth", action="callback", callback=lio_target_tpg_disableauth, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="Disable iSCSI Authentication for LIO-Target Portal Group")
+	parser.add_option("--disablelunwp", action="callback", callback=lio_target_disable_lunwp, nargs=4,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Clear Write Protect bit for iSCSI Initiator LUN ACL")
+	parser.add_option("--disabletpg", action="callback", callback=lio_target_disable_tpg, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="Disable LIO-Target Portal Group")
+	parser.add_option("--enablelunwp", action="callback", callback=lio_target_enable_lunwp, nargs=4,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Set Write Protect bit for iSCSI Initiator LUN ACL")
+	parser.add_option("--enabletpg", action="callback", callback=lio_target_enable_tpg, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="Enable LIO-Target Portal Group")
+	parser.add_option("--listendpoints", action="callback", callback=lio_target_list_endpoints, nargs=0,
+		help="List iSCSI Target Endpoints")
+	parser.add_option("--listlunacls", action="callback", callback=lio_target_list_lunacls, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator LUN ACLs for LIO-Target Portal Group")
+	parser.add_option("--listnodeacls", action="callback", callback=lio_target_list_nodeacls, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator ACLs for LIO-Target Portal Group")
+	parser.add_option("--listnps", action="callback", callback=lio_target_list_nps, nargs=2,
+		type="string", dest="TARGET_IQN TPGT", help="List LIO-Target Portal Group Network Portals")
+	parser.add_option("--listtargetnames", action="callback", callback=lio_target_list_targetnames, nargs=0,
+		help="List iSCSI Target Names")
+	parser.add_option("--setnodetcq", action="callback", callback=lio_target_set_node_tcq, nargs=4,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN DEPTH", help="Set iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
+	parser.add_option("--shownodetcq", action="callback", callback=lio_target_show_node_tcq, nargs=3,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
+	parser.add_option("--unload", action="callback", callback=lio_target_unload, nargs=0,
+		help="Unload LIO-Target")
+	parser.add_option("--version", action="callback", callback=lio_target_version, nargs=0,
+		help="Display LIO-Target version information")
+
+	(options, args) = parser.parse_args()
+	if len(sys.argv) == 1:
+		parser.print_help()
+		sys.exit(0)
+	elif not re.search('--', sys.argv[1]):
+		lio_err("Unknown CLI option: " + sys.argv[1])
+
+if __name__ == "__main__":
+	main()
