@@ -386,6 +386,58 @@ def lio_target_del_nodeacl(option, opt_str, value, parser):
 
 	return
 
+def lio_target_set_chap_auth(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	initiator_iqn = str(value[2]);
+	user = str(value[3]);
+	password = str(value[4]);
+
+	auth_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/auth/"
+
+	if not os.path.isdir(auth_dir):
+		lio_err("iSCSI Initiator ACL " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+
+	setuser_op = "echo -n " + user + " > " + auth_dir + "/userid"
+	ret = os.system(setuser_op)	
+	if ret:
+		lio_err("Unable to set CHAP username for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+
+	setpassword_op = "echo -n " + password + " > " + auth_dir + "/password"
+	ret = os.system(setpassword_op)
+	if ret:
+		lio_err("Unable to set CHAP password for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+	else:
+		print "Successfully set CHAP authentication for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+
+	return
+
+def lio_target_set_chap_mutual_auth(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	initiator_iqn = str(value[2]);
+	user_in = str(value[3]);
+	password_in = str(value[4]);
+
+	auth_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/auth/"
+
+	if not os.path.isdir(auth_dir):
+		lio_err("iSCSI Initiator ACL " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+
+	setuser_op = "echo -n " + user_in + " > " + auth_dir + "/userid_in"
+	ret = os.system(setuser_op)
+	if ret:
+		lio_err("Unable to set mutual CHAP username for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+
+	setpassword_op = "echo -n " + password_in + " > " + auth_dir + "/password_in"
+	ret = os.system(setpassword_op)
+	if ret:
+		lio_err("Unable to set mutual CHAP password for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+	else:
+		print "Successfully set mutual CHAP authentication for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt	
+	
+	return
+
 def lio_target_set_node_tcq(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
@@ -398,6 +450,24 @@ def lio_target_set_node_tcq(option, opt_str, value, parser):
 		lio_err("Unable to set TCQ: " + depth + " for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully set TCQ: " + depth + " for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+
+	return
+
+def lio_target_show_chap_auth(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	initiator_iqn = str(value[2]);
+
+	auth_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/auth/"
+
+	if not os.path.isdir(auth_dir):
+		lio_err("iSCSI Initiator ACL " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+
+	for auth in os.listdir(auth_dir):
+		p = os.open(auth_dir + "/" + auth, 0)
+		value = os.read(p, 256)
+		print auth + ": " + value.rstrip()
+		os.close(p)	
 
 	return
 
@@ -662,8 +732,14 @@ def main():
 		type="string", dest="TARGET_IQN TPGT", help="List LIO-Target Portal Group Network Portals")
 	parser.add_option("--listtargetnames", action="callback", callback=lio_target_list_targetnames, nargs=0,
 		help="List iSCSI Target Names")
+	parser.add_option("--setchapauth", action="callback", callback=lio_target_set_chap_auth, nargs=5,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER PASS", help="Set CHAP authentication information for iSCSI Initiator Node ACL");
+	parser.add_option("--setchapinauth", action="callback", callback=lio_target_set_chap_mutual_auth, nargs=5,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER_IN PASS_IN", help="Set CHAP mutual authentication information for iSCSI Initiator Node ACL");
 	parser.add_option("--setnodetcq", action="callback", callback=lio_target_set_node_tcq, nargs=4,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN DEPTH", help="Set iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
+	parser.add_option("--showchapauth", action="callback", callback=lio_target_show_chap_auth, nargs=3,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show CHAP authentication information for iSCSI Initiator Node ACL");
 	parser.add_option("--shownodetcq", action="callback", callback=lio_target_show_node_tcq, nargs=3,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
 	parser.add_option("--unload", action="callback", callback=lio_target_unload, nargs=0,
