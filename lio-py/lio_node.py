@@ -304,62 +304,62 @@ def lio_target_enableaclmode(option, opt_str, value, parser):
 def lio_target_add_lunacl(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
-	initatior_iqn = str(value[2]);
+	initiator_iqn = str(value[2]);
 	tpg_lun = str(value[3]);
 	mapped_lun = str(value[4]);
 
-	mkdir_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/lun_" + mapped_lun
+	mkdir_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun
 	ret = os.system(mkdir_op)
 	if ret:
-		lio_err("Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
-	addlunacl_op = "ln -s " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + tpg_lun + " " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/lun_" + mapped_lun + "/lio_lun"
+	addlunacl_op = "ln -s " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + tpg_lun + " " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/lio_lun"
 
 	ret = os.system(addlunacl_op)
 	if ret:
-		lio_err("Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
-		print "Successfully added iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		print "Successfully added iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
 	return
 
 def lio_target_del_lunacl(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
-	initatior_iqn = str(value[2]);
+	initiator_iqn = str(value[2]);
 	mapped_lun = str(value[3]);
 
-	lun_link_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/lun_" + mapped_lun
+	lun_link_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun
 	for lun_acl_link in os.listdir(lun_link_dir):
 		if lun_acl_link == "write_protect":
 			continue
 
-		unlink_op = "unlink " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/lun_" + mapped_lun + "/" + lun_acl_link
+		unlink_op = "unlink " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/" + lun_acl_link
 #		print "unlink_op: " + unlink_op
 		ret = os.system(unlink_op)
 		if ret:
-			lio_err("Unable to unlink iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+			lio_err("Unable to unlink iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 		
-	dellunacl_op = "rmdir " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/lun_" + mapped_lun
+	dellunacl_op = "rmdir " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun
 	ret = os.system(dellunacl_op)
 	if ret:
-		lio_err("Unable to delete iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to delete iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
-		print "Successfully deleted iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		print "Successfully deleted iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
 	return
 
 def lio_target_add_nodeacl(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
-	initatior_iqn = str(value[2]);
+	initiator_iqn = str(value[2]);
 	
-	addnodeacl_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn
+	addnodeacl_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn
 	ret = os.system(addnodeacl_op)
 	if ret:
-		lio_err("Unable to add iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to add iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
-		print "Successfully added iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		print "Successfully added iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
 	return
 
@@ -396,17 +396,17 @@ def lio_target_set_chap_auth(option, opt_str, value, parser):
 	auth_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/auth/"
 
 	if not os.path.isdir(auth_dir):
-		lio_err("iSCSI Initiator ACL " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("iSCSI Initiator ACL " + initiator_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
 	setuser_op = "echo -n " + user + " > " + auth_dir + "/userid"
 	ret = os.system(setuser_op)	
 	if ret:
-		lio_err("Unable to set CHAP username for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to set CHAP username for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
 	setpassword_op = "echo -n " + password + " > " + auth_dir + "/password"
 	ret = os.system(setpassword_op)
 	if ret:
-		lio_err("Unable to set CHAP password for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to set CHAP password for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully set CHAP authentication for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
@@ -422,17 +422,17 @@ def lio_target_set_chap_mutual_auth(option, opt_str, value, parser):
 	auth_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/auth/"
 
 	if not os.path.isdir(auth_dir):
-		lio_err("iSCSI Initiator ACL " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("iSCSI Initiator ACL " + initiator_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
 	setuser_op = "echo -n " + user_in + " > " + auth_dir + "/userid_in"
 	ret = os.system(setuser_op)
 	if ret:
-		lio_err("Unable to set mutual CHAP username for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to set mutual CHAP username for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
 	setpassword_op = "echo -n " + password_in + " > " + auth_dir + "/password_in"
 	ret = os.system(setpassword_op)
 	if ret:
-		lio_err("Unable to set mutual CHAP password for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to set mutual CHAP password for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully set mutual CHAP authentication for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt	
 	
@@ -441,15 +441,15 @@ def lio_target_set_chap_mutual_auth(option, opt_str, value, parser):
 def lio_target_set_node_tcq(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
-	initatior_iqn = str(value[2]);
+	initiator_iqn = str(value[2]);
 	depth = str(value[3]);
 
-	setnodetcq_op = "echo " + depth + " > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn + "/cmdsn_depth"
+	setnodetcq_op = "echo " + depth + " > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/cmdsn_depth"
 	ret = os.system(setnodetcq_op)
 	if ret:
-		lio_err("Unable to set TCQ: " + depth + " for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("Unable to set TCQ: " + depth + " for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
-		print "Successfully set TCQ: " + depth + " for iSCSI Initaitor ACL " + initatior_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		print "Successfully set TCQ: " + depth + " for iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
 
 	return
 
@@ -461,7 +461,7 @@ def lio_target_show_chap_auth(option, opt_str, value, parser):
 	auth_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/auth/"
 
 	if not os.path.isdir(auth_dir):
-		lio_err("iSCSI Initiator ACL " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("iSCSI Initiator ACL " + initiator_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
 	for auth in os.listdir(auth_dir):
 		p = os.open(auth_dir + "/" + auth, 0)
@@ -474,11 +474,11 @@ def lio_target_show_chap_auth(option, opt_str, value, parser):
 def lio_target_show_node_tcq(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
-	initatior_iqn = str(value[2]);
+	initiator_iqn = str(value[2]);
 
-	nacl = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initatior_iqn
+	nacl = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn
 	if not os.path.isdir(nacl):
-		lio_err("iSCSI Initiator ACL: " + initatior_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
+		lio_err("iSCSI Initiator ACL: " + initiator_iqn + " does not exist for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 
 	tcq_depth_file = nacl + "/cmdsn_depth"
 	p = os.open(tcq_depth_file, 0)
