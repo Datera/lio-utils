@@ -80,6 +80,22 @@ def lio_target_configfs_dump():
 				print "echo " + value.rstrip() + " > " + tcq_depth_file
 				os.close(p)
 
+				# Dump iSCSI Initiator ACL authentication info from iscsi/iqn/tpgt/acls/$INITIATOR/auth
+				print "#### iSCSI Initiator ACL authentication information"
+				auth_dir = nacl_dir + nacl + "/auth"
+				for auth in os.listdir(auth_dir):
+					if auth == "authenticate_target":
+						continue
+					auth_file = auth_dir + "/" + auth
+					p = os.open(auth_file, 0)
+					value = os.read(p, 256)
+					ret = value.isspace()
+					if ret:
+						os.close(p)
+						continue
+					print "echo -n " + value.rstrip() + " > " + auth_file
+					os.close(p)
+
 				# Dump iSCSI Initiator ACL TPG attributes from iscsi/iqn/tpgt/acls/$INITIATOR/attrib
 				print "#### iSCSI Initiator ACL TPG attributes"
 				nacl_attrib_dir = nacl_dir + nacl + "/attrib"
