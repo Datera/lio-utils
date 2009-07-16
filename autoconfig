@@ -135,10 +135,12 @@ sub LIO_VERSION
 {
     my $lio_ver = "3.0";
     my $lio_utils_git_rev = `git rev-list --max-count=1 HEAD`;
-    chomp($lio_utils_ver);
+    chomp($lio_utils_git_rev);
+    my $lio_utils_rev = substr $lio_utils_git_rev, 0, 8;
 
     $env->{LIO_VERSION} = $lio_ver;
-    $env->{LIO_UTILS_VERSION} = "$lio_ver";
+    $env->{LIO_UTILS_VERSION} = $lio_ver;
+    $env->{LIO_UTILS_REV} = $lio_utils_rev;
 
     return($lio_ver)
 }
@@ -335,7 +337,7 @@ sub make_target_user_rpm
     my $iscsid = { name => "lio-utils",
 		   product_name => "Linux-iSCSI.org Target v3.x Userspace utils",
 		   version => $env->{LIO_UTILS_VERSION},
-		   release => 1,
+		   release => $env->{LIO_UTILS_REV},
 		   group => "Linux-iSCSI.org/Target (applications)",
 		   requires => "target-core-modules",
 		   requires => "iscsi-target-module",
@@ -560,8 +562,8 @@ sub make_mibs_rpm
 
     my $rpm = { name => "lio-mibs",
 		product_name => "LIO's Target SCSI and iSCSI MIB file(s)",
-		version => $env->{LIO_VERSION},
-		release => 1,
+		version => $env->{LIO_UTILS_VERSION},
+		release => $env->{LIO_UTILS_REV},
 		group => "TCM and LIO-Target (mibs,$ostype->{ARCH},libraries)",
 		files => {
 		    $mibfile  => { original => "mib-modules"},
