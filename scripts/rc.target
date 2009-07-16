@@ -74,7 +74,6 @@ RETVAL=0
 
 function run_lio_target_cfs_ops() {
 	if [ ! -f ${LIO_CONFIGFS_SCRIPT} ]; then
-		echo "ELIOR - Cannot find ${LIO_CONFIGFS_SCRIPT} "
 		exit 1
 	fi	
 
