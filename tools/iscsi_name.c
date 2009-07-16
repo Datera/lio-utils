@@ -45,7 +45,7 @@ main(int argc, char *argv[])
 	struct MD5Context context;
 	unsigned char digest[16];
 	unsigned char *bytes = digest;
-	unsigned char entropy[16];
+	unsigned char entropy[16], machine[16]; 
 	int e;
 	int fd;
 	char *prefix;
@@ -133,8 +133,15 @@ main(int argc, char *argv[])
 	if ((ptr = strstr(system_info.nodename, ".")))
 		(*ptr) = '\0';
 
+	snprintf(machine, 16, "%s", system_info.machine);
+	/*
+	 * Remove "_" character from uname -m output for x86_64.
+	 */
+	if ((ptr = strstr(machine, "_")))
+		*ptr = '\0';		
+
 	/* print the prefix followed by 6 bytes of the MD5 hash */
-	sprintf(iname, "%s.%s.%s:sn.%x%x%x%x%x%x", prefix, system_info.nodename, system_info.machine,
+	sprintf(iname, "%s.%s.%s:sn.%x%x%x%x%x%x", prefix, system_info.nodename, machine,
 		bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]);
 
 	iname[sizeof (iname) - 1] = '\0';
