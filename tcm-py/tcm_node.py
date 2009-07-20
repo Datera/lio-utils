@@ -244,8 +244,16 @@ def tcm_list_hbas(option, opt_str, value, parser):
 		for dev in os.listdir(dev_root):
 			if dev == "hba_info":
 				continue
-			p = os.open(dev_root + "/" + dev + "/info", 0)
-			value = os.read(p, 256)
+			p = open(dev_root + "/" + dev + "/info", 'rU')
+			try:
+				value = p.read(256)
+			except IOError, msg:
+				print "        \-------> " + dev
+				print "        No TCM object association active, skipping"
+				p.close()
+				continue
+			
+			p.close()
 			u = os.open(dev_root + "/" + dev + "/udev_path", 0)
 			udev_path = os.read(u, 256)
 			if udev_path:
@@ -256,7 +264,7 @@ def tcm_list_hbas(option, opt_str, value, parser):
 			print "        \-------> " + dev
 			print "        " + value.rstrip()
 			print "        " + udev_str
-			os.close(p)
+			os.close(u)
 
 	return
 

@@ -39,20 +39,19 @@ def rd_freevirtdev():
 def rd_get_params(path):
 
 	info_file = path + "/info"
-	p = os.open(info_file, 0)
-	value = os.read(p, 1024)
+	p = open(info_file, 'rU')
+	try:
+		value = p.read(1024)
+	except IOError, msg:
+		p.close()
+		return
+	p.close()
+
 	off = value.index('PAGE_SIZE: ')
 	off += 11 # Skip over "PAGE_SIZE: "
 	rd_pages_tmp = value[off:]
 	rd_pages = rd_pages_tmp.split('*')
 	params = "rd_pages=" + rd_pages[0]
-	os.close(p)
-
-	# Direct configfs reference usage
-#	print "mkdir -p " + path
-#	print "echo " + params + " > " + path + "/control"
-#	print "echo 1 > " + path + "/enable"
-#	return 0
 
 	# rd_pages= parameter for tcm_node --createdev
 	return rd_pages[0]

@@ -65,9 +65,15 @@ def iblock_get_params(path):
 	os.close(p)
 
 	info_file = path + "/info"
-	p = os.open(info_file, 0)
-	value = os.read(p, 1024)
-	off = value.index('Major: ')
+	p = open(info_file, 'rU')
+	try:
+		value = p.read(1024)
+	except IOError, msg:	
+		p.close()
+		return
+	p.close()
+
+	of = value.index('Major: ')
 	off += 7
 	major_tmp = value[off:]
 	major = major_tmp.split(' ')
@@ -78,8 +84,4 @@ def iblock_get_params(path):
 	params = "major=" + major[0] + ",minor=" + minor[0]
 	os.close(p)
 
-	# Direct configfs reference usage
-	print "mkdir -p " + path
-	print "echo " + params + " > " + path + "/control"
-	print "echo 1 > " + path + "/enable"
-	return 0
+	return params

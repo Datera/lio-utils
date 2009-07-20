@@ -36,8 +36,14 @@ def fd_freevirtdev():
 def fd_get_params(path):
 
 	info_file = path + "/info"
-	p = os.open(info_file, 0)
-	value = os.read(p, 1024)
+	p = open(info_file, 'rU')
+	try:
+		value = p.read(1024)
+	except IOError, msg:
+		p.close()
+		return
+	p.close()
+
 	off = value.index('File: ')
 	off += 6
 	fd_dev_name_tmp = value[off:]
@@ -47,13 +53,6 @@ def fd_get_params(path):
 	fd_dev_size_tmp = value[off:]
 	fd_dev_size = fd_dev_size_tmp.split(' ')
 	params = "fd_dev_name=" + fd_dev_name[0] + ",fd_dev_size=" + fd_dev_size[0]
-	os.close(p)
-
-	# Direct configfs reference usage
-#	print "mkdir -p " + path
-#	print "echo " + params + " > " + path + "/control"
-#	print "echo 1 > " + path + "/enable"
-#	return 0
 
 	# fd_dev_name= and fd_dev_size= parameters for tcm_node --createdev
 	return params

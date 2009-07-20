@@ -74,8 +74,14 @@ def pscsi_freevirtdev():
 def pscsi_get_params(path):
 	
 	info_file = path + "/info"
-	p = os.open(info_file, 0)
-	value = os.read(p, 1024)
+	p = open(info_file, 'rU')
+	try:
+		value = p.read(1024)
+	except IOError, msg:
+		p.close()
+		return
+	p.close()
+
 	off = value.index('Channel ID: ')
 	off += 12	
 	channel_id_tmp = value[off:]
@@ -89,13 +95,6 @@ def pscsi_get_params(path):
 	lun_id_tmp = value[off:]
 	lun_id = lun_id_tmp.split(' ')
 	params = "scsi_channel_id=" + channel_id[0] + ",scsi_target_id=" + target_id[0] + ",scsi_lun_id=" + lun_id[0].rstrip()
-	os.close(p)
-
-	# Direct configfs reference usage
-#	print "mkdir -p " + path
-#	print "echo " + params + " > " + path + "/control"
-#	print "echo 1 > " + path + "/enable"
-#	return 0
 
 	# scsi_channel_id=, scsi_target_id= and scsi_lun_id= reference for tcm_node --createdev
 	return params

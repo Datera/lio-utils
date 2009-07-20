@@ -73,32 +73,37 @@ def tcm_dump_configfs():
 			if result:
 				dev = dev_root + g
 				params = tcm_pscsi.pscsi_get_params(dev)
-				if params:
-					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				if not params:
+					continue
+				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 			result = re.search('iblock_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_iblock.iblock_get_params(dev)
-				if params:
-					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				if not params:
+					continue
+				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 			result = re.search('rd_dr_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_ramdisk.rd_get_params(dev)	
-				if params:
-					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				if not params:
+					continue
+				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 			result = re.search('rd_mcp_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_ramdisk.rd_get_params(dev)
-				if params:
-					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				if not params:
+					continue
+				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 			result = re.search('fileio_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_fileio.fd_get_params(dev)
-				if params:
-					print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				if not params:
+					continue
+				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
 
 			# Dump T10 VP Unit Serial for all non Target_Core_Mod/pSCSI objects
 			result = re.search('pscsi_', f)
