@@ -456,7 +456,7 @@ def main():
 	parser.add_option("--pr", action="callback", callback=tcm_show_persistent_reserve_info, nargs=1,
 			type="string", dest="HBA/DEV", help="Show Persistent Reservation info")
 	parser.add_option("--setlugp", action="callback", callback=tcm_set_alua_lugp, nargs=2,
-			type="string", dest="HBA/DEV", help="Set ALUA Logical Unit Group")
+			type="string", dest="HBA/DEV LU_GP_NAME", help="Set ALUA Logical Unit Group")
 	parser.add_option("--setudevpath", action="callback", callback=tcm_set_udev_path, nargs=2,
 			type="string", dest="HBA/DEV <udev_path>", help="Set UDEV Path Information, only used when --createdev did not contain <udev_path> as parameter")
 	parser.add_option("--setunitserial", action="callback", callback=tcm_set_wwn_unit_serial, nargs=2,
