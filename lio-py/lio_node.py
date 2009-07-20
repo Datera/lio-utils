@@ -745,7 +745,7 @@ def main():
 	parser.add_option("--deltpg", action="callback", callback=lio_target_del_tpg, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Delete LIO-Target Portal Group")
 	parser.add_option("--demomode", "--permissive", action="callback", callback=lio_target_tpg_demomode, nargs=2,
-		type="string", dest="TARGET_IQN TPGT", help="Disable all iSCSI Initiator ACL requirements (enable DemoMode) for LIO-Target Portal Group (Enabled by default)")
+		type="string", dest="TARGET_IQN TPGT", help="Disable all iSCSI Initiator ACL requirements (enable DemoMode) for LIO-Target Portal Group (Disabled by default)")
 	parser.add_option("--disableauth", action="callback", callback=lio_target_tpg_disableauth, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Disable iSCSI Authentication for LIO-Target Portal Group (Enabled by default)")
 	parser.add_option("--disablelunwp", action="callback", callback=lio_target_disable_lunwp, nargs=4,
