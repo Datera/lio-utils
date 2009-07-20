@@ -208,6 +208,37 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 
 	return
 
+def tcm_create_pscsi(option, opt_str, value, parser):
+	cfs_dev = str(value[0])
+	ctl = str(value[1])
+
+	ctl_params = ctl.split(':')
+
+	pscsi_params = "scsi_channel_id=" + ctl_params[0] + ",scsi_target_id=" + ctl_params[1] + ",scsi_lun_id=" + ctl_params[2]
+	vals = [cfs_dev, pscsi_params]
+	tcm_createvirtdev(None, None, vals, None)
+	return
+
+def tcm_create_iblock(option, opt_str, value, parser):
+
+	tcm_createvirtdev(option, opt_str, value, parser)
+	return
+
+def tcm_create_fileio(option, opt_str, value, parser):
+	cfs_dev = str(value[0])
+	file = str(value[1])
+	size_in_bytes = str(value[2])
+
+	fileio_params = "fd_dev_name=" + file + ",fd_dev_size=" + size_in_bytes
+	vals = [cfs_dev, fileio_params]	
+	tcm_createvirtdev(None, None, vals, None)
+	return
+
+def tcm_create_ramdisk(option, opt_str, value, parser):
+
+	tcm_createvirtdev(option, opt_str, value, parser)
+	return
+
 def tcm_freevirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_path = cfs_unsplit.split('/')
@@ -445,6 +476,8 @@ def main():
 			type="string", dest="lu_gp_name", help="Add ALUA Logical Unit Group")
 	parser.add_option("--addtgptgp", action="callback", callback=tcm_add_alua_tgptgp, nargs=1,
 			type="string", dest="tg_pt_gp_name", help="Add ALUA Target Port Group")
+	parser.add_option("--block","--iblock", action="callback", callback=tcm_create_iblock, nargs=2,
+			type="string", dest="HBA/DEV <UDEV_PATH>", help="Associate TCM/IBLOCK object with Linux/BLOCK device")
 	parser.add_option("--delhba", action="callback", callback=tcm_delhba, nargs=1,
 			type="string", dest="HBA", help="Delete TCM Host Bus Adapter (HBA)")
 	parser.add_option("--dellungp", action="callback", callback=tcm_del_alua_lugp, nargs=1,
@@ -452,7 +485,9 @@ def main():
 	parser.add_option("--deltgptgp", action="callback", callback=tcm_del_alua_tgptgp, nargs=1,
 			type="string", dest="tg_pt_gp_name", help="Delete ALUA Target Port Group")
 	parser.add_option("--createdev", action="callback", callback=tcm_createvirtdev, nargs=2,
-			type="string", dest="HBA/DEV <params>", help="Create TCM Storage Object")
+			type="string", dest="HBA/DEV <SUBSYSTEM_PARAMS>", help="Create TCM Storage Object using subsystem dependent parameters")
+	parser.add_option("--fileio", action="callback", callback=tcm_create_fileio, nargs=3,
+			type="string", dest="HBA/DEV <FILE> <SIZE_IN_BYTES>", help="Associate TCM/FILEIO object with Linux/VFS file or underlying device for buffered FILEIO")
 	parser.add_option("--freedev", action="callback", callback=tcm_freevirtdev, nargs=1,
 			type="string", dest="HBA/DEV", help="Free TCM Storage Object")
 	parser.add_option("--listhbas", action="callback", callback=tcm_list_hbas, nargs=0,
@@ -463,6 +498,10 @@ def main():
                         help="List ALUA Target Port Groups");
 	parser.add_option("--pr", action="callback", callback=tcm_show_persistent_reserve_info, nargs=1,
 			type="string", dest="HBA/DEV", help="Show Persistent Reservation info")
+	parser.add_option("--ramdisk", action="callback", callback=tcm_create_ramdisk, nargs=2,
+			type="string", dest="HBA/DEV <PAGES>", help="Create and associate TCM/RAMDISK object")
+	parser.add_option("--scsi","--pscsi", action="callback", callback=tcm_create_pscsi, nargs=2,
+			type="string", dest="HBA/DEV <C:T:L>", help="Associate TCM/pSCSI object with Linux/SCSI device")
 	parser.add_option("--setlugp", action="callback", callback=tcm_set_alua_lugp, nargs=2,
 			type="string", dest="HBA/DEV LU_GP_NAME", help="Set ALUA Logical Unit Group")
 	parser.add_option("--setudevpath", action="callback", callback=tcm_set_udev_path, nargs=2,
