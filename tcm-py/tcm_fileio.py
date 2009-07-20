@@ -15,14 +15,14 @@ def fd_createvirtdev(path, params):
 	fd_params = params[0]
 
 	control_opt = "echo " + fd_params + " > " + cfs_path + "control"
-	print "control_opt: " + control_opt
+#	print "control_opt: " + control_opt
 	ret = os.system(control_opt)
 	if ret:
 		print "FILEIO: createvirtdev failed for control_opt with " + fd_params
 		return -1
 
 	enable_opt = "echo 1 > " +  cfs_path + "enable"	
-	print "Calling enable_opt " + enable_opt
+#	print "Calling enable_opt " + enable_opt
 	ret = os.system(enable_opt)
 	if ret:
 		print "FILEIO: createvirtdev failed for enable_opt with " + fd_params
