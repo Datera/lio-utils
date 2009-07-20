@@ -453,6 +453,28 @@ def lio_target_set_node_tcq(option, opt_str, value, parser):
 
 	return
 
+def lio_target_alua_set_tgptgp(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	lun = str(value[2]);
+	tg_pt_gp_name = str(value[3])
+
+	lun_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
+	if not os.path.isdir(lun_dir):
+		lio_err("LIO-Target Port/LUN: " + lun + " does not exist on: " + iqn + " " + tpgt)
+
+	if not os.path.isdir(tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp_name):
+		lio_err("ALUA Target Port Group: " + tg_pt_gp_name + " does not exist!")	
+
+	set_tp_pt_gp_op = "echo " + tg_pt_gp_name + " > " + lun_dir + "/alua_tg_pt_gp"
+	ret = os.system(set_tp_pt_gp_op)
+	if ret:
+		lio_err("Unable to set ALUA Target Port Group: " + tg_pt_gp_name + " for LUN: " + lun + " on " + iqn + " " + tpgt)
+	else:
+		print "Successfully set set ALUA Target Port Group: " + tg_pt_gp_name + " for LUN: " + lun + " on " + iqn + " " + tpgt
+
+	return
+
 def lio_target_show_chap_auth(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	tpgt = str(value[1]);
@@ -485,6 +507,22 @@ def lio_target_show_node_tcq(option, opt_str, value, parser):
 	value = os.read(p, 8)
 	print value.rstrip()
 	os.close(p)
+
+	return
+
+def lio_target_alua_show_tgptgp(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	lun = str(value[2]);
+
+	lun_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
+	if not os.path.isdir(lun_dir):
+		lio_err("LIO-Target Port/LUN: " + lun + " does not exist on: " + iqn + " " + tpgt)
+
+	show_tp_pt_gp_op = "cat " + lun_dir + "/alua_tg_pt_gp"
+	ret = os.system(show_tp_pt_gp_op)
+	if ret:
+		lio_err("Unable to show ALUA Target Port Group: " + tg_pt_gp_name + " for LUN: " + lun + " on " + iqn + " " + tpgt)
 
 	return
 
@@ -738,10 +776,14 @@ def main():
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER_IN PASS_IN", help="Set CHAP mutual authentication information for iSCSI Initiator Node ACL");
 	parser.add_option("--setnodetcq", action="callback", callback=lio_target_set_node_tcq, nargs=4,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN DEPTH", help="Set iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
+	parser.add_option("--settgptgp", action="callback", callback=lio_target_alua_set_tgptgp, nargs=4,
+		type="string", dest="TARGET_IQN TPGT LUN TG_PT_GP_NAME", help="Set ALUA Target Port Group for LIO-Target Port/LUN")
 	parser.add_option("--showchapauth", action="callback", callback=lio_target_show_chap_auth, nargs=3,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show CHAP authentication information for iSCSI Initiator Node ACL");
 	parser.add_option("--shownodetcq", action="callback", callback=lio_target_show_node_tcq, nargs=3,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
+	parser.add_option("--showtgptgp", action="callback", callback=lio_target_alua_show_tgptgp, nargs=3,
+		type="string", dest="TARGET_IQN TPGT LUN", help="Show ALUA Target Port Group for LIO-Target Port/LUN")
 	parser.add_option("--unload", action="callback", callback=lio_target_unload, nargs=0,
 		help="Unload LIO-Target")
 	parser.add_option("--version", action="callback", callback=lio_target_version, nargs=0,

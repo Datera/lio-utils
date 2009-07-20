@@ -35,6 +35,24 @@ def lio_target_configfs_dump():
 				
 				lun_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
 				print "mkdir -p " + lun_dir
+
+				# Dump ALUA Target Port Group
+				print "#### ALUA Target Port Group"
+				tg_pt_gp_file = lun_dir + "/alua_tg_pt_gp"
+				p = os.open(tg_pt_gp_file, 0)
+				value = os.read(p, 512)
+				os.close(p)
+				if value:
+					tg_pt_gp_tmp = value.split('\n')
+					tg_pt_gp_out = tg_pt_gp_tmp[0]
+					off = tg_pt_gp_out.index('Alias: ')
+					off += 7 # Skip over "Alias: "
+					tg_pt_gp_name = tg_pt_gp_out[off:]
+					# Only need to dump if LIO-Target Port is NOT partof
+					# the 'default_tg_pt_gp'
+					if not re.search(tg_pt_gp_name, 'default_tg_pt_gp'):
+						print "echo " + tg_pt_gp_name + " > " + tg_pt_gp_file
+
 				port_root = os.listdir(lun_dir)
 				for port in port_root:
 					if port == "alua_tg_pt_gp":
