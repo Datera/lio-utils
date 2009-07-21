@@ -273,6 +273,21 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 
 	return
 
+def tcm_list_dev_attribs(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	print "TCM Storage Object Attributes for " + cfs_dev_path
+	for attrib in os.listdir(cfs_dev_path + "/attrib/"):
+		p = open(cfs_dev_path + "/attrib/" + attrib, 'rU')
+		value = p.read(16)
+		p.close()
+		print "       " + attrib + ": " + value.rstrip()
+
+	return
+
 def tcm_list_hbas(option, opt_str, value, parser):
 
 	for hba in os.listdir(tcm_root):
@@ -395,6 +410,24 @@ def tcm_set_alua_lugp(option, opt_str, value, parser):
 
 	return
 
+def tcm_set_dev_attrib(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	attrib = str(value[1])
+	value = str(value[2])
+	
+	attrib_path_set_op = "echo " + value + " > " + cfs_dev_path + "/attrib/" + attrib
+	ret = os.system(attrib_path_set_op)
+	if ret:
+		tcm_err("Unable to set TCM storage object attribute for:" + cfs_dev_path + "/attrib/" + attrib)
+	else:
+		print "Successfully set TCM storage object attribute: " + attrib + "=" + value + " for " + cfs_dev_path + "/attrib/" + attrib
+
+	return
+
 def tcm_set_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -504,6 +537,8 @@ def main():
 			type="string", dest="HBA/DEV <FILE> <SIZE_IN_BYTES>", help="Associate TCM/FILEIO object with Linux/VFS file or underlying device for buffered FILEIO")
 	parser.add_option("--freedev", action="callback", callback=tcm_freevirtdev, nargs=1,
 			type="string", dest="HBA/DEV", help="Free TCM Storage Object")
+	parser.add_option("--listdevattr", action="callback", callback=tcm_list_dev_attribs, nargs=1,
+			type="string", dest="HBA/DEV", help="List TCM storage object device attributes")
 	parser.add_option("--listhbas", action="callback", callback=tcm_list_hbas, nargs=0,
 			help="List TCM Host Bus Adapters (HBAs)")
         parser.add_option("--listlugps", action="callback", callback=tcm_list_alua_lugps, nargs=0,
@@ -518,6 +553,8 @@ def main():
 			type="string", dest="HBA/DEV <C:T:L>", help="Associate TCM/pSCSI object with Linux/SCSI device by bus location")
 	parser.add_option("--scsibyudev", "--pscsibyudev", action="callback", callback=tcm_create_pscsibyudev, nargs=2,
 			type="string", dest="DEV <UDEV_PATH>", help="Associate TCM/pSCSI object with Linux/SCSI device by UDEV Path")
+	parser.add_option("--setdevattr", action="callback", callback=tcm_set_dev_attrib, nargs=3,
+			type="string", dest="HBA/DEV <ATTRIB> <VALUE>", help="Set new value for TCM storage object device attribute")
 	parser.add_option("--setlugp", action="callback", callback=tcm_set_alua_lugp, nargs=2,
 			type="string", dest="HBA/DEV LU_GP_NAME", help="Set ALUA Logical Unit Group")
 	parser.add_option("--setudevpath", action="callback", callback=tcm_set_udev_path, nargs=2,
@@ -525,6 +562,7 @@ def main():
 	parser.add_option("--setunitserial", action="callback", callback=tcm_set_wwn_unit_serial, nargs=2,
 			type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information")
 	parser.add_option("--udevpath", action="callback", callback=tcm_show_udev_path, nargs=1,
+	
 			type="string", dest="HBA/DEV", help="Show UDEV Path Information for TCM storage object")
 	parser.add_option("--unload", action="callback", callback=tcm_unload, nargs=0,
 			help="Unload target_core_mod")
