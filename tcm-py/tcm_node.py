@@ -219,6 +219,20 @@ def tcm_create_pscsi(option, opt_str, value, parser):
 	tcm_createvirtdev(None, None, vals, None)
 	return
 
+def tcm_create_pscsibyudev(option, opt_str, value, parser):
+	cfs_dev = str(value[0])
+	tmp_params = str(value[1])
+	plugin_params = tmp_params.split(' ')
+
+	print " ConfigFS Device Alias: " + cfs_dev
+	ret = tcm_pscsi.pscsi_createvirtdev(cfs_dev, plugin_params)
+	if not ret:
+		print "Successfully created TCM/ConfigFS storage object: " + plugin_params[0]
+	else:
+		tcm_err("Unable to register TCM/ConfigFS storage object: " + plugin_params[0])
+
+	return
+
 def tcm_create_iblock(option, opt_str, value, parser):
 
 	tcm_createvirtdev(option, opt_str, value, parser)
@@ -501,7 +515,9 @@ def main():
 	parser.add_option("--ramdisk", action="callback", callback=tcm_create_ramdisk, nargs=2,
 			type="string", dest="HBA/DEV <PAGES>", help="Create and associate TCM/RAMDISK object")
 	parser.add_option("--scsi","--pscsi", action="callback", callback=tcm_create_pscsi, nargs=2,
-			type="string", dest="HBA/DEV <C:T:L>", help="Associate TCM/pSCSI object with Linux/SCSI device")
+			type="string", dest="HBA/DEV <C:T:L>", help="Associate TCM/pSCSI object with Linux/SCSI device by bus location")
+	parser.add_option("--scsibyudev", "--pscsibyudev", action="callback", callback=tcm_create_pscsibyudev, nargs=2,
+			type="string", dest="DEV <UDEV_PATH>", help="Associate TCM/pSCSI object with Linux/SCSI device by UDEV Path")
 	parser.add_option("--setlugp", action="callback", callback=tcm_set_alua_lugp, nargs=2,
 			type="string", dest="HBA/DEV LU_GP_NAME", help="Set ALUA Logical Unit Group")
 	parser.add_option("--setudevpath", action="callback", callback=tcm_set_udev_path, nargs=2,
