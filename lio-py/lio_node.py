@@ -664,6 +664,9 @@ def lio_target_list_targetnames(option, opt_str, value, parser):
 
 def lio_target_unload(option, opt_str, value, parser):
 
+	if not os.path.isdir(lio_root):
+		lio_err("Unable to access lio_root: " + lio_root)
+
 	iqn_root = os.listdir(lio_root)
 
 	# Loop through LIO-Target IQN list
