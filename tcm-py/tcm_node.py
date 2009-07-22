@@ -165,30 +165,33 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 	if ret:
 		tcm_err("Failed to create ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret)
 
-#	Calls into submodules depending on target_core_mod subsystem plugin
+	# Calls into submodules depending on target_core_mod subsystem plugin
 	ret = 0
-	gen_uuid = 0
+	gen_uuid = 1
+	# Determine if --establishdev is being called and we want to skip
+	# the T10 Unit Serial Number generation
+	if len(value) > 2:
+		if str(value[2]) == "1":
+			gen_uuid = 0
+
 	result = re.search('pscsi_', hba_cfs)
 	if result:
+		gen_uuid = 0
 		ret = tcm_pscsi.pscsi_createvirtdev(cfs_path, plugin_params)
 	result = re.search('stgt_', hba_cfs)
 	if result:
 		print "stgt"
 	result = re.search('iblock_', hba_cfs)
 	if result:
-		gen_uuid = 1
 		ret = tcm_iblock.iblock_createvirtdev(cfs_path, plugin_params)
 	result = re.search('rd_dr_', hba_cfs)
 	if result:
-		gen_uuid = 1
 		ret = tcm_ramdisk.rd_createvirtdev(cfs_path, plugin_params)
 	result = re.search('rd_mcp_', hba_cfs)
 	if result:
-		gen_uuid = 1
 		ret = tcm_ramdisk.rd_createvirtdev(cfs_path, plugin_params)
 	result = re.search('fileio_', hba_cfs)
 	if result:
-		gen_uuid = 1
 		ret = tcm_fileio.fd_createvirtdev(cfs_path, plugin_params)
 
 	if not ret:
@@ -206,6 +209,14 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 		os.rmdir(cfs_dev_path);
 		tcm_err("Unable to register TCM/ConfigFS storage object: " + cfs_dev_path)
 
+	return
+
+def tcm_establishvirtdev(option, opt_str, value, parser):
+	cfs_dev = str(value[0])
+	plugin_params = str(value[1])
+
+	vals = [cfs_dev, plugin_params, 1]
+	tcm_createvirtdev(None, None, vals, None)
 	return
 
 def tcm_create_pscsi(option, opt_str, value, parser):
@@ -535,7 +546,9 @@ def main():
 	parser.add_option("--deltgptgp", action="callback", callback=tcm_del_alua_tgptgp, nargs=1,
 			type="string", dest="tg_pt_gp_name", help="Delete ALUA Target Port Group")
 	parser.add_option("--createdev", action="callback", callback=tcm_createvirtdev, nargs=2,
-			type="string", dest="HBA/DEV <SUBSYSTEM_PARAMS>", help="Create TCM Storage Object using subsystem dependent parameters")
+			type="string", dest="HBA/DEV <SUBSYSTEM_PARAMS>", help="Create TCM Storage Object using subsystem dependent parameters, and generate new T10 Unit Serial for IBLOCK,FILEIO,RAMDISK")
+	parser.add_option("--establishdev", action="callback", callback=tcm_establishvirtdev, nargs=2,
+			type="string", dest="HBA/DEV <SUBSYSTEM_PARAMS>", help="Create TCM Storage Object using subsystem dependent parameters, do not generate new T10 Unit Serial")
 	parser.add_option("--fileio", action="callback", callback=tcm_create_fileio, nargs=3,
 			type="string", dest="HBA/DEV <FILE> <SIZE_IN_BYTES>", help="Associate TCM/FILEIO object with Linux/VFS file or underlying device for buffered FILEIO")
 	parser.add_option("--freedev", action="callback", callback=tcm_freevirtdev, nargs=1,
