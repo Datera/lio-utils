@@ -167,7 +167,7 @@ function load_tcm_mod() {
 }
 
 function shutdown_lio_mod () {
-	echo -n $"Shutting down LIO-Target/ConfigS"
+	echo -n $"Unloading LIO-Target/ConfigFS fabric: "
 	${LIO_NODE} --unload
         RETVAL=$?
         if [ $RETVAL == 0 ]; then
