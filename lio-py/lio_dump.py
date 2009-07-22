@@ -1,13 +1,18 @@
 #!/usr/bin/python
-import os
+import os, sys
 import subprocess as sub
 import string
 import re
+import datetime, time
 from optparse import OptionParser
 
 lio_root = "/sys/kernel/config/target/iscsi"
 
-def lio_target_configfs_dump():
+def lio_target_configfs_dump(option, opt_str, value, parser):
+
+	if not os.path.isdir(lio_root):
+		print "Unable to access lio_root: " + lio_root
+		sys.exit(1)
 
 	iqn_root = os.listdir(lio_root)
 
@@ -158,4 +163,60 @@ def lio_target_configfs_dump():
 
 	return
 
-lio_target_configfs_dump()
+def lio_backup_to_file(option, opt_str, value, parser):
+	now = str(value)
+
+	if not os.path.isdir(lio_root):
+		print "Unable to access lio_root: " + lio_root
+		sys.exit(1) 
+
+	backup_dir = "/etc/target/backup"
+	if not os.path.isdir(backup_dir):
+		op = "mkdir " + backup_dir
+		ret = os.system(op)
+		if ret:
+			print "Unable to open backup_dir"
+			sys.exit(1)
+
+	op = "lio_dump --stdout"
+	p = sub.Popen(op, shell=True, stdout=sub.PIPE).stdout
+	if not p:
+		print "Unable to dump LIO-Target/ConfigFS running state"
+		sys.exit(1)
+
+	print "Making backup of LIO-Target/ConfigFS with timestamp: " + now
+	backup_file = backup_dir + "/lio_backup-" + now + ".sh"
+	if os.path.isfile(backup_file): 
+		print "LIO-Target backup_file: " + backup_file + "already exists, exiting"
+		p.close()
+		sys.exit(1)
+
+	back = open(backup_file, 'w')
+
+	line = p.readline()
+	while line:
+		print >>back, line.rstrip()
+		line = p.readline()
+
+	p.close()
+	back.close()
+	return backup_file
+
+def main():
+
+	parser = OptionParser()
+	parser.add_option("--s","--stdout", action="callback", callback=lio_target_configfs_dump, nargs=0,
+		help="Dump running LIO-Target/ConfigFS syntax to STDOUT")
+	parser.add_option("--t", "--tofile", action="callback", callback=lio_backup_to_file, nargs=1,
+		type="string", dest="DATE_TIME", help="Backup running LIO-Target/ConfigFS syntax to /etc/target/backup/lio_backup-<DATE_TIME>.sh")
+
+	(options, args) = parser.parse_args()
+	if len(sys.argv) == 1:
+		parser.print_help()
+		sys.exit(0)
+	elif not re.search('--', sys.argv[1]):
+		print "Unknown CLI option: " + sys.argv[1]
+		sys.exit(1)
+
+if __name__ == "__main__":
+        main()
