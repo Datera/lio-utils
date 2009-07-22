@@ -484,6 +484,9 @@ def tcm_show_wwn_info(option, opt_str, value, parser):
 
 def tcm_unload(option, opt_str, value, parser):
 
+	if not os.path.isdir(tcm_root):
+		tcm_err("Unable to access tcm_root: " + tcm_root)
+
 	hba_root = os.listdir(tcm_root)
 
 	for f in hba_root:
