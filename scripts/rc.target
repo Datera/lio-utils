@@ -65,6 +65,9 @@ if [ ! -d /var/lock/subsys ]; then
 	mkdir -p /var/lock/subsys
 fi
 
+ARGS_CHECK=2
+ARGS_COUNT=$#
+
 cd /	    # to avoid making the CWD unmountable
 
 #########################################################################
@@ -73,11 +76,21 @@ PATH="/sbin:/bin:/usr/sbin:/usr/bin:$PATH"
 RETVAL=0
 
 function run_lio_target_cfs_ops() {
+	DATETIME=$1
+
 	if [ ! -f ${LIO_CONFIGFS_SCRIPT} ]; then
 		exit 1
 	fi	
+	
+	if [ $DATETIME != "0" ]; then
+		LIO_CONFIGFS_SCRIPT="/etc/target/backup/lio_backup-$DATETIME.sh"
+		if [ ! -f $LIO_CONFIGFS_SCRIPT ]; then
+			echo "Unable to locate config file $LIO_CONFIGFS_SCRIPT"
+			exit 1
+		fi
+	fi
 
-	echo -n $"Calling ConfigFS script for iscsi_target_mod: "
+	echo -n $"Calling ConfigFS script $LIO_CONFIGFS_SCRIPT for iscsi_target_mod: "
 	if [ -f $LIO_CONFIGFS_SCRIPT ]; then
 		sh ${LIO_CONFIGFS_SCRIPT} > /dev/null 2>&1
 		RET=$?
@@ -90,11 +103,21 @@ function run_lio_target_cfs_ops() {
 }
 
 function run_tcm_cfs_ops() {
+	DATETIME=$1
+
 	if [ ! -f ${TCM_CONFIGFS_SCRIPT} ]; then
 		exit 1
 	fi
 
-	echo -n $"Calling ConfigFS script for target_core_mod: "
+	if [ $DATETIME != "0" ]; then
+		TCM_CONFIGFS_SCRIPT="/etc/target/backup/tcm_backup-$DATETIME.sh"
+		if [ ! -f $TCM_CONFIGFS_SCRIPT ]; then
+			echo "Unable to locate config file $TCM_CONFIGFS_SCRIPT"
+			exit 1
+		fi
+	fi
+
+	echo -n $"Calling ConfigFS script $TCM_CONFIGFS_SCRIPT for target_core_mod: "
 	if [ -f $TCM_CONFIGFS_SCRIPT ]; then
 		sh ${TCM_CONFIGFS_SCRIPT} > /dev/null 2>&1
 		RET=$?
@@ -105,7 +128,7 @@ function run_tcm_cfs_ops() {
 		fi
 	fi
 
-	run_lio_target_cfs_ops
+	run_lio_target_cfs_ops $1
 }
 
 function load_scsi_disk() {
@@ -266,7 +289,7 @@ start () {
 		return $RETVAL
 	fi
 
-	run_tcm_cfs_ops
+	run_tcm_cfs_ops $1
 
 	touch ${LOCK_TARGET}
 	rm -f ${SEMA_TARGET}
@@ -338,7 +361,14 @@ restart () {
 
 case "$1" in
 	start)
-		start 1
+		start 0
+		;;
+	startbak)
+		if [ "$ARGS_COUNT" -ne "$ARGS_CHECK" ]; then
+			echo "Usage: /etc/init.d/target startbak <DATE_TIME>"
+			exit 1
+		fi
+		start $2
 		;;
 	stop)
 		stop 1
@@ -351,7 +381,7 @@ case "$1" in
 		restart 1
 		;;
 	*)
-		echo $"Usage: $0 {start|stop|status|restart}"
+		echo $"Usage: $0 {start|startbak|stop|status|restart}"
 		exit 1
 esac
 

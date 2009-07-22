@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
-import os
+import os, sys, shutil
 import subprocess as sub
 from subprocess import Popen, PIPE
 import string
 import re
+import datetime, time
 from optparse import OptionParser
 
 import tcm_pscsi
@@ -12,12 +13,18 @@ import tcm_iblock
 import tcm_ramdisk
 import tcm_fileio
 
+import lio_dump
+
 tcm_root = "/sys/kernel/config/target/core"
 
 def tcm_dump_hba_devices():
 	return	
 
-def tcm_dump_configfs():
+def tcm_dump_configfs(option, opt_str, value, parser):
+
+	if not os.path.isdir(tcm_root):
+		print "Unable to access tcm_root: " + tcm_root
+		sys.exit(1)
 
 	print "modprobe target_core_mod"
 
@@ -75,35 +82,35 @@ def tcm_dump_configfs():
 				params = tcm_pscsi.pscsi_get_params(dev)
 				if not params:
 					continue
-				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				print "tcm_node --establishdev " + f + "/" + g + " " + str(params)
 			result = re.search('iblock_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_iblock.iblock_get_params(dev)
 				if not params:
 					continue
-				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				print "tcm_node --establishdev " + f + "/" + g + " " + str(params)
 			result = re.search('rd_dr_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_ramdisk.rd_get_params(dev)	
 				if not params:
 					continue
-				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				print "tcm_node --establishdev " + f + "/" + g + " " + str(params)
 			result = re.search('rd_mcp_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_ramdisk.rd_get_params(dev)
 				if not params:
 					continue
-				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				print "tcm_node --establishdev " + f + "/" + g + " " + str(params)
 			result = re.search('fileio_', f)
 			if result:
 				dev = dev_root + g
 				params = tcm_fileio.fd_get_params(dev)
 				if not params:
 					continue
-				print "tcm_node --createdev " + f + "/" + g + " " + str(params)
+				print "tcm_node --establishdev " + f + "/" + g + " " + str(params)
 
 			# Dump T10 VP Unit Serial for all non Target_Core_Mod/pSCSI objects
 			result = re.search('pscsi_', f)
@@ -158,4 +165,119 @@ def tcm_dump_configfs():
 
 	return
 
-tcm_dump_configfs()
+def tcm_backup_to_file(option, opt_str, value, parser):
+	datetime = str(value)
+	
+	if not os.path.isdir(tcm_root):
+		print "Unable to access tcm_root: " + tcm_root
+		sys.exit(1)
+
+	backup_dir = "/etc/target/backup"
+	if not os.path.isdir(backup_dir):
+		op = "mkdir " + backup_dir
+		ret = os.system(op)
+		if ret:
+			print "Unable to open backup_dir"
+			sys.exit(1)
+
+	op = "tcm_dump --stdout"
+	p = sub.Popen(op, shell=True, stdout=sub.PIPE).stdout
+	if not p:
+		print "Unable to dump Target_Core_Mod/ConfigFS running state"
+		sys.exit(0)
+
+	print "Making backup of Target_Core_Mod/ConfigFS with timestamp: " + datetime 
+	backup_file = backup_dir + "/tcm_backup-" + datetime + ".sh"
+	if os.path.isfile(backup_file):
+		print "Target_Core_Mod backup_file: " + backup_file + "already exists, exiting"
+		p.close()
+		sys.exit(1)
+
+	back = open(backup_file, 'w')
+
+	line = p.readline()
+	while line:
+		print >>back, line.rstrip()
+		line = p.readline()
+
+	p.close()
+	back.close()
+	return backup_file
+
+def tcm_full_backup(option, opt_str, value, parser):
+	overwrite = str(value)
+
+	now = datetime.datetime.now()
+	tmp = str(now)
+	tmp2 = tmp.split(' ')
+	timestamp = tmp2[0] + "_" + tmp2[1]
+
+	tcm_file = "/etc/target/tcm_start.sh"
+	lio_file = "/etc/target/lio_start.sh"
+	lio_active = 0
+	
+	if os.path.isdir("/sys/kernel/config/target/iscsi"):
+		lio_file_new = lio_dump.lio_backup_to_file(None, None, timestamp, None)
+		if not lio_file_new:
+			sys.exit(1)
+		lio_active = 1
+		print "Generated LIO-Target config: " + lio_file_new
+
+
+	tcm_file_new = tcm_backup_to_file(None, None, timestamp, None)
+	if not tcm_file_new:
+		sys.exit(1)
+
+	print "Generated Target_Core_Mod config: " + tcm_file_new
+	
+	if overwrite != "1":
+		print "Not updating default config"
+		return
+
+	if lio_active:
+		ret = shutil.copyfile(lio_file_new, lio_file)
+		if ret:
+			print "Unable to copy " + lio_file_new
+			sys.exit(1)
+		print "Successfully updated default config " + lio_file
+
+	ret = shutil.copyfile(tcm_file_new, tcm_file)
+	if ret:
+		print "Unable to copy " + tcm_file_new
+		sys.exit(1)
+
+	print "Successfully updated default config " + tcm_file 
+	return
+
+def tcm_overwrite_default(option, opt_str, value, parser):
+
+	input = raw_input("Are you sure you want to overwrite the default configuration? Type 'yes': ")
+	if input != "yes":
+		sys.exit(0)
+
+	val = "1"
+	tcm_full_backup(None, None, val, None)
+	return
+
+def main():
+	
+	parser = OptionParser()
+	parser.add_option("--b","--backup", action="callback", callback=tcm_full_backup, nargs=1,
+		type="string", dest="OVERWRITE", help="Do backup of TCM and storage fabric modules, and optionally overwrite default config data")
+	parser.add_option("--o","--overwrite", action="callback", callback=tcm_overwrite_default, nargs=0,
+		help="Overwrite default config data of TCM and storage fabric modules")
+	parser.add_option("--s","--stdout", action="callback", callback=tcm_dump_configfs, nargs=0,
+		help="Dump running Target_Core_Mod/ConfigFS syntax to STDOUT")
+	parser.add_option("--t", "--tofile", action="callback", callback=tcm_backup_to_file, nargs=1,
+		type="string", dest="DATE_TIME", help="Backup running Target_Core_Mod/ConfigFS syntax to /etc/target/backup/tcm_backup-<DATE_TIME>.sh")
+
+	(options, args) = parser.parse_args()
+	if len(sys.argv) == 1:
+		parser.print_help()
+		sys.exit(0)
+	elif not re.search('--', sys.argv[1]):
+		print "Unknown CLI option: " + sys.argv[1]
+		sys.exit(1)
+
+if __name__ == "__main__":
+        main()
