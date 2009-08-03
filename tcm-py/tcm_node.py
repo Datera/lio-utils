@@ -465,6 +465,18 @@ def tcm_snapshot_start(option, opt_str, value, parser):
 	if ret:
 		tcm_err("Not starting snapshot daemon because it is already enabled")
 
+	lv_group = tcm_snap.get_cfs_snap_lvgroup(cfs_dev_path)
+	if not lv_group:
+		tcm_err("lv_group for snapshot not set, please initialize configfs snapshot attrs with --lvsnapinit");
+
+	snap_size = tcm_snap.get_cfs_snap_size(cfs_dev_path)
+	if not snap_size:
+		tcm_err("size for snapshot not set, please initialize configfs snapshot attrs with --lvsnapinit");
+
+	max_snapshots = tcm_snap.get_cfs_max_snapshots(cfs_dev_path)
+	if not max_snapshots:
+		tcm_err("max rotating snapshots value not set, please initialize configfs snapshot attrs with --lvsnapinit");
+
 	ret = os.spawnlp(os.P_NOWAIT,"/usr/sbin/tcm_snap","tcm_snap","--p",cfs_dev_path)
 	if not ret:
 		tcm_err("Unable to start tcm_snap for: " + cfs_dev_path)
