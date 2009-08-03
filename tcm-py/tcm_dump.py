@@ -163,6 +163,43 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 				print "echo " + value.rstrip() + " > " + attrib_file
 				os.close(p)
 
+			# Dump snapshot attributes
+			snap_attrib_root = dev_root + g + "/snap/"
+			if (os.path.isdir(snap_attrib_root) == False):
+				continue
+
+			snap_enabled = 0
+			enabled_attr_file = snap_attrib_root + "enabled"
+			p = open(enabled_attr_file, 'rU')
+			if not p:
+				continue
+			value = p.read()
+			enabled = value.rstrip()
+			p.close()
+			if enabled != "1":
+				continue
+
+			snap_enabled = 1
+			print "#### Snapshot Attributes for " + dev_root + g
+			for s in os.listdir(snap_attrib_root):
+				if s == "pid":
+					continue
+				if s == "usage":
+					continue
+				if s == "enabled":
+					continue
+
+				attrib_file = snap_attrib_root + s
+				p = open(attrib_file, 'rU')
+				value = p.read()
+				p.close()
+				attr_val = value.rstrip()
+				print "echo " + attr_val + " > " + attrib_file
+
+			if snap_enabled == 1:
+				print "tcm_node --lvsnapstart " + f + "/" + g
+
+
 	return
 
 def tcm_backup_to_file(option, opt_str, value, parser):

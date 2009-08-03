@@ -1,14 +1,17 @@
 #!/usr/bin/python
-import os, sys
+import os, sys, signal
 import subprocess as sub
 import string
 import re
+import errno
 from optparse import OptionParser
 
 import tcm_pscsi
 import tcm_iblock
 import tcm_ramdisk
 import tcm_fileio
+
+import tcm_snap
 
 tcm_root = "/sys/kernel/config/target/core"
 
@@ -276,6 +279,10 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 	if (os.path.isdir(cfs_dev_path) == False):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
+	snap_attr_path = cfs_dev_path + "/snap"
+	if os.path.isdir(snap_attr_path) == True:
+		tcm_snapshot_stop(None, None, value, None)
+
 	ret = os.rmdir(cfs_dev_path)
 	if not ret:
 		print "Successfully released TCM/ConfigFS storage object: " + cfs_dev_path
@@ -388,6 +395,171 @@ def tcm_list_alua_tgptgps(option, opt_str, value, parser):
 			i += 1
 
         return
+
+def tcm_snapshot_attr_set(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	tmp = str(value[1])
+	
+	out = tmp.split('=')
+	if not out:
+		tcm_err("Unable to locate snapshot attr=value")
+
+	attr = out[0]
+	value = out[1]
+
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	
+	p = open(cfs_dev_path + "/snap/" + attr, 'wU')
+	val = p.write(value)
+	if val:
+		p.close()
+		tcm_err("Unable to write to snap_attr: " + cfs_dev_path + "/snap/" + attr)
+
+	p.close()
+	print "Successfully updated snapshot attribute: " + attr + "=" + value + " for " + cfs_dev_path
+	return
+
+def tcm_snapshot_attr_show(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	snap_attr_path = cfs_dev_path + "/snap"
+	for snap_attr in os.listdir(snap_attr_path):
+		p = open(snap_attr_path + "/" + snap_attr, 'rU')
+		val = p.read()
+		p.close()
+		print snap_attr +"=" + val.rstrip()	
+
+	return
+
+def tcm_snapshot_init(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	max_snapshots = int(value[1])
+	lv_size = str(value[2])
+	snap_interval = str(value[3])
+
+	ret = tcm_snap.snap_set_cfs_defaults(cfs_dev_path, max_snapshots, lv_size, snap_interval)
+	if ret:
+		tcm_err("Unable to initialize snapshot attributes for " + cfs_dev_path)
+	
+	return
+
+def tcm_snapshot_start(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	ret = tcm_snap.get_cfs_snap_enabled(cfs_dev_path)
+	if ret:
+		tcm_err("Not starting snapshot daemon because it is already enabled")
+
+	ret = os.spawnlp(os.P_NOWAIT,"/usr/sbin/tcm_snap","tcm_snap","--p",cfs_dev_path)
+	if not ret:
+		tcm_err("Unable to start tcm_snap for: " + cfs_dev_path)
+
+	print "Started tcm_snap daemon at pid: " + str(ret) + " for " + cfs_dev_path
+	
+	enabled_attr = cfs_dev_path + "/snap/enabled"
+	p = open(enabled_attr, 'wU')
+	if not p:
+		tcm_err("Unable to open enabled_attr: " + enabled_attr)
+
+	val = p.write("1")
+	if val:
+		p.close()
+		tcm_err("Unable to set snap/enabled for " + cfs_dev_path)
+
+	p.close()
+	return
+
+def tcm_snapshot_status(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	udev_path = tcm_snap.get_cfs_udev_path(cfs_dev_path)
+	if not udev_path:
+		tcm_err("Unable to locate udev path for LV snapshot")
+
+	val = udev_path.split('/')
+	if not val:
+		tcm_err("Unable to split udev_path")
+
+	# Assume that udev_path is in '/dev/$VG_GROUP/$LV_NAME' format
+	vg_group = val[2]
+#	print "vg_group: " + vg_group
+	lv_name = val[3]
+#	print "lv_name: " + lv_name
+	
+	tcm_snap.snap_dump_lvs_info(vg_group, lv_name)
+	return
+
+def tcm_snapshot_stop(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	enabled_attr = cfs_dev_path + "/snap/enabled"
+	p = open(enabled_attr, 'rU')
+	if not p:
+		tcm_err("Unable to open enabled_attr: " + enabled_attr)
+
+        val = p.read()
+        p.close()
+	if val.rstrip() == "0":
+		return
+
+	pid_attr = cfs_dev_path + "/snap/pid"
+	p = open(pid_attr, 'rU')
+	if not p:
+		tcm_err("Unable to open pid_attr: " + pid_attr)
+
+	val = p.read()
+	pid = int(val.rstrip())
+	p.close()
+#	print "Located tcm_snap pid: " + str(pid) + " for " + cfs_dev_path
+	try:
+		os.kill(pid, signal.SIGKILL)
+	except OSError, err:
+		return err.errno == errno.EPERM
+
+	print "Successfully stopped tcm_snap daemon for " + cfs_dev_path
+	p = open(pid_attr, 'wU')
+	if not p:
+		tcm_err("Unable to open pid_attr: " + pid_attr)
+
+	val = p.write("0")
+	if val:
+		print "Unable to clear snap pid"
+	p.close()
+
+	enabled_attr = cfs_dev_path + "/snap/enabled"
+	p = open(enabled_attr, 'wU')
+	if not p:
+		tcm_err("Unable to open enabled_attr: " + enabled_attr)
+		
+	val = p.write("0")
+	if val:
+		p.close()
+		tcm_err("Unable to set snap/enabled for " + cfs_dev_path)
+	p.close()
+	return
 
 def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -561,6 +733,18 @@ def main():
                         help="List ALUA Logical Unit Groups")
         parser.add_option("--listtgptgps", action="callback", callback=tcm_list_alua_tgptgps, nargs=0,
                         help="List ALUA Target Port Groups");
+	parser.add_option("--lvsnapattrset", action="callback", callback=tcm_snapshot_attr_set, nargs=2,
+			type="string", dest="HBA/DEV ATTR=VALUE", help="Set LV snapshot configfs attributes for TCM/IBLOCK storage object");
+	parser.add_option("--lvsnapattrshow", action="callback", callback=tcm_snapshot_attr_show, nargs=1,
+			type="string", dest="HBA/DEV", help="Show LV snapshot configfs attributes for TCM/IBLOCK storage object");
+	parser.add_option("--lvsnapinit", action="callback", callback=tcm_snapshot_init, nargs=4,
+			type="string", dest="HBA/DEV MAX_SNAPSHOTS SNAP_SIZE_STR SNAP_INTERVAL_STR", help="Initialize snapshot with default attributes");
+	parser.add_option("--lvsnapstart", action="callback", callback=tcm_snapshot_start, nargs=1,
+			type="string", dest="HBA/DEV", help="Enable snapshot daemon for TCM/IBLOCK LVM storage object");
+	parser.add_option("--lvsnapstat", action="callback", callback=tcm_snapshot_status, nargs=1,
+			type="string", dest="HBA/DEV", help="Display LV snapshot status for TCM/IBLOCK LVM storage object");
+	parser.add_option("--lvsnapstop", action="callback", callback=tcm_snapshot_stop, nargs=1,
+			type="string", dest="HBA/DEV", help="Disable snapshot daemon for TCM/IBLOCK LVM storage object");
 	parser.add_option("--pr", action="callback", callback=tcm_show_persistent_reserve_info, nargs=1,
 			type="string", dest="HBA/DEV", help="Show Persistent Reservation info")
 	parser.add_option("--ramdisk", action="callback", callback=tcm_create_ramdisk, nargs=2,
