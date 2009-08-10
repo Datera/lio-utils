@@ -214,6 +214,111 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 
 	return
 
+def tcm_get_unit_serial(cfs_dev_path):
+
+	unit_serial_file = cfs_dev_path + "/wwn/vpd_unit_serial"
+	p = open(unit_serial_file, 'rU')
+	if not p:
+		tcm_err("Unable to open unit_serial_file: " + unit_serial_file)
+
+	tmp = p.read()
+	p.close()
+	off = tmp.index('Number: ')
+	off += 8 # Skip over "Number: "
+	unit_serial = tmp[off:]
+	return unit_serial.rstrip()
+
+def tcm_show_aptpl_metadata(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_path = cfs_unsplit.split('/')
+	hba_cfs = cfs_path[0]
+	dev_vfs_alias = cfs_path[1]
+
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	unit_serial = tcm_get_unit_serial(cfs_dev_path)
+	aptpl_file = "/var/target/pr/aptpl_" + unit_serial
+	if (os.path.isfile(aptpl_file) == False):
+		tcm_err("Unable to dump PR APTPL metadata file: " + aptpl_file);
+	
+	os.system("cat " + aptpl_file);	
+	return
+
+def tcm_process_aptpl_metadata(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_path = cfs_unsplit.split('/')
+	hba_cfs = cfs_path[0]
+	dev_vfs_alias = cfs_path[1]
+
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	unit_serial = tcm_get_unit_serial(cfs_dev_path)
+	aptpl_file = "/var/target/pr/aptpl_" + unit_serial
+	if (os.path.isfile(aptpl_file) == False):
+		return
+
+	print "Reading APTPL metadata from: " + aptpl_file
+
+	p = open(aptpl_file, 'rU')
+	if not p:
+		tcm_err("Unable to open aptpl_file: " + aptpl_file)
+	
+	start = 1
+	out = ""
+
+	line = p.readline()
+	if re.search('No Registrations or Reservations', line):
+		p.close()
+		return
+
+	if not re.search('PR_REG_START:', line):
+		p.close()
+		tcm_err("Unable to find PR_REG_START key in: " + aptpl_file);
+
+
+	cfs_aptpl_file = cfs_dev_path + "/pr/res_aptpl_metadata"
+
+	while line:
+		if start == 1:
+			if not re.search('PR_REG_START:', line):
+				p.close()
+				return
+
+			start = 0
+			out = ""
+			line = p.readline()
+			continue;
+		
+		if not re.search('PR_REG_END:', line):
+			out += line.rstrip()
+			out += ","
+			line = p.readline()
+			continue
+
+		out = out[:-1]
+
+		cfs = open(cfs_aptpl_file, 'wU')
+		if not cfs:
+			p.close()
+			tcm_err("Unable to open cfs_aptpl_file: " + cfs_aptpl_file)
+
+		val = cfs.write(out)
+		if val:
+			print "Failed to write PR APTPL metadata to: " + cfs_aptpl_file
+			
+		cfs.close()
+#		print "Write out to configfs: " + out
+		out = ""
+		start = 1
+		line = p.readline()
+
+	p.close()
+	return
+
 def tcm_establishvirtdev(option, opt_str, value, parser):
 	cfs_dev = str(value[0])
 	plugin_params = str(value[1])
@@ -759,6 +864,10 @@ def main():
 			type="string", dest="HBA/DEV", help="Disable snapshot daemon for TCM/IBLOCK LVM storage object");
 	parser.add_option("--pr", action="callback", callback=tcm_show_persistent_reserve_info, nargs=1,
 			type="string", dest="HBA/DEV", help="Show Persistent Reservation info")
+	parser.add_option("--praptpl", action="callback", callback=tcm_process_aptpl_metadata, nargs=1,
+			type="string", dest="HBA/DEV", help="Process PR APTPL metadata from file")
+	parser.add_option("--prshowmd", action="callback", callback=tcm_show_aptpl_metadata, nargs=1,
+			type="string", dest="HBA/DEV", help="Show APTPL metadata file")
 	parser.add_option("--ramdisk", action="callback", callback=tcm_create_ramdisk, nargs=2,
 			type="string", dest="HBA/DEV <PAGES>", help="Create and associate TCM/RAMDISK object")
 	parser.add_option("--scsi","--pscsi", action="callback", callback=tcm_create_pscsi, nargs=2,

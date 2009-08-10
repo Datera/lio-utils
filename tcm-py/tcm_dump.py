@@ -124,6 +124,11 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 				print "echo " + unit_serial.rstrip() + " > " + unit_serial_file
 				os.close(p)
 
+			# Add the PR APTPL metadata read operation for all non Target_Core_Mod/pSCSI objects
+			result = re.search('pscsi_', f)
+			if not result:
+				print "tcm_node --praptpl " + f + "/" + g
+
 			# Dump ALUA Logical Unit Group
 			lu_gp_file = dev_root + g + "/alua_lu_gp"
 			p = os.open(lu_gp_file, 0)
