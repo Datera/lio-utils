@@ -749,18 +749,13 @@ def check_for_vgs_usage_warn(cfs_path):
 def main():
 	global snap_debug
 	count = 0
-	cfs_path = "/sys/kernel/config/target/core/iblock_0/lvm_test0"
+	cfs_path = ""
 
 	# Get path to LVM userspace CLI
 	get_lvcreate_path()
 	get_lvdisplay_path()
 	get_lvremove_bin()
 	get_vgdisplay_bin()
-
-	# Set out process ID (PID) with configfs
-	set_cfs_snap_pid(cfs_path)
-	# Read the current snap attribute values from configfs
-	get_cfs_snap_attrs(cfs_path)
 
 	parser = OptionParser()
 	parser.add_option("--p", dest="tcmdevpath", help="target_core_mod configfs device path", nargs=1)
@@ -779,6 +774,12 @@ def main():
 		snap_debug = 1
 
 	cfs_path = options.tcmdevpath
+
+	# Set out process ID (PID) with configfs
+	set_cfs_snap_pid(cfs_path)
+	# Read the current snap attribute values from configfs
+	get_cfs_snap_attrs(cfs_path)
+
 	lvm_src = get_cfs_udev_path(cfs_path)
 	if not lvm_src:
 		print "Unable to locate udev_path from target_core_mod"
