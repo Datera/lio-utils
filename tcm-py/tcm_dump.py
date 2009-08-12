@@ -8,6 +8,7 @@ import re
 import datetime, time
 from optparse import OptionParser
 
+import tcm_node
 import tcm_pscsi
 import tcm_iblock
 import tcm_ramdisk
@@ -127,7 +128,15 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 			# Add the PR APTPL metadata read operation for all non Target_Core_Mod/pSCSI objects
 			result = re.search('pscsi_', f)
 			if not result:
-				print "tcm_node --praptpl " + f + "/" + g
+				unit_serial = tcm_node.tcm_get_unit_serial(dev_root + g)
+				aptpl_file = "/var/target/pr/aptpl_" + unit_serial
+				if (os.path.isfile(aptpl_file) == True):
+					tmp = open(aptpl_file, 'rU')	
+					aptpl = tmp.readline()
+					tmp.close()
+					ret = re.search('No Registrations or Reservations', aptpl)
+					if not ret:
+						print "tcm_node --praptpl " + f + "/" + g
 
 			# Dump ALUA Logical Unit Group
 			lu_gp_file = dev_root + g + "/alua_lu_gp"
