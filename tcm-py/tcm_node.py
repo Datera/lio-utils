@@ -397,12 +397,13 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 	if os.path.isdir(snap_attr_path) == True:
 		tcm_snapshot_stop(None, None, value, None)
 
-	for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
-		if tg_pt_gp == "default_tg_pt_gp":
-			continue
+	if os.path.isdir(cfs_dev_path + "/alua/") == True:
+		for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
+			if tg_pt_gp == "default_tg_pt_gp":
+				continue
 
-		vals = [value, tg_pt_gp]
-		tcm_del_alua_tgptgp(None, None, vals, None)
+			vals = [value, tg_pt_gp]
+			tcm_del_alua_tgptgp(None, None, vals, None)
 
 	ret = os.rmdir(cfs_dev_path)
 	if not ret:
