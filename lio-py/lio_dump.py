@@ -41,8 +41,19 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 				lun_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
 				print "mkdir -p " + lun_dir
 
+				port_root = os.listdir(lun_dir)
+				for port in port_root:
+					if port == "alua_tg_pt_gp":
+						continue
+					if port == "alua_tg_pt_offline":
+						continue
+					
+					port_link = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun + "/" + port
+					sourcelink = os.readlink(port_link)
+					sourcelink2 = os.path.join(os.path.dirname(port_link), sourcelink)
+					print "ln -s " + sourcelink2 + " " + port_link
+
 				# Dump ALUA Target Port Group
-				print "#### ALUA Target Port Group"
 				tg_pt_gp_file = lun_dir + "/alua_tg_pt_gp"
 				p = os.open(tg_pt_gp_file, 0)
 				value = os.read(p, 512)
@@ -56,19 +67,9 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 					# Only need to dump if LIO-Target Port is NOT partof
 					# the 'default_tg_pt_gp'
 					if not re.search(tg_pt_gp_name, 'default_tg_pt_gp'):
+						print "#### ALUA Target Port Group"
 						print "echo " + tg_pt_gp_name + " > " + tg_pt_gp_file
 
-				port_root = os.listdir(lun_dir)
-				for port in port_root:
-					if port == "alua_tg_pt_gp":
-						continue
-
-					port_link = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun + "/" + port
-					sourcelink = os.readlink(port_link)
-					sourcelink2 = os.path.join(os.path.dirname(port_link), sourcelink)
-					print "ln -s " + sourcelink2 + " " + port_link
-				
-			
 			# Dump values of iscsi/iqn/tpgt/attrib/
 			print "#### Attributes for iSCSI Target Portal Group"
 			attrib_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/"

@@ -177,6 +177,8 @@ def lio_target_del_port(option, opt_str, value, parser):
 	for port in port_root:
 		if port == "alua_tg_pt_gp":
 			continue
+		if port == "alua_tg_pt_offline":
+			continue
 
 		unlink_op = "unlink " + lun_dir + "/" + port
 #		print "del_portunlink_op: " + unlink_op
@@ -463,16 +465,48 @@ def lio_target_alua_set_tgptgp(option, opt_str, value, parser):
 	if not os.path.isdir(lun_dir):
 		lio_err("LIO-Target Port/LUN: " + lun + " does not exist on: " + iqn + " " + tpgt)
 
-	if not os.path.isdir(tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp_name):
-		lio_err("ALUA Target Port Group: " + tg_pt_gp_name + " does not exist!")	
-
 	set_tp_pt_gp_op = "echo " + tg_pt_gp_name + " > " + lun_dir + "/alua_tg_pt_gp"
 	ret = os.system(set_tp_pt_gp_op)
 	if ret:
 		lio_err("Unable to set ALUA Target Port Group: " + tg_pt_gp_name + " for LUN: " + lun + " on " + iqn + " " + tpgt)
 	else:
-		print "Successfully set set ALUA Target Port Group: " + tg_pt_gp_name + " for LUN: " + lun + " on " + iqn + " " + tpgt
+		print "Successfully set ALUA Target Port Group: " + tg_pt_gp_name + " for LUN: " + lun + " on " + iqn + " " + tpgt
 
+	return
+
+def lio_target_alua_set_tgpt_offline(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	lun = str(value[2]);
+
+	lun_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
+	if not os.path.isdir(lun_dir):
+		lio_err("LIO-Target Port/LUN: " + lun + " does not exist on: " + iqn + " " + tpgt)
+
+	set_tg_pt_gp_offline_op = "echo 1 > " + lun_dir + "/alua_tg_pt_offline"
+	ret = os.system(set_tg_pt_gp_offline_op)
+	if ret:
+		lio_err("Unable to set ALUA secondary state OFFLINE bit for LUN: " + lun + " on " + iqn + " " + tpgt)
+	else:
+		print "Successfully set ALUA secondary state OFFLINE for LUN: " + lun + " on " + iqn + " " + tpgt
+
+	return
+
+def lio_target_alua_clear_tgpt_offline(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	tpgt = str(value[1]);
+	lun = str(value[2]);
+
+	lun_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
+	if not os.path.isdir(lun_dir):
+		lio_err("LIO-Target Port/LUN: " + lun + " does not exist on: " + iqn + " " + tpgt)
+
+	set_tg_pt_gp_offline_op = "echo 0 > " + lun_dir + "/alua_tg_pt_offline"
+	ret = os.system(set_tg_pt_gp_offline_op)
+	if ret:
+		lio_err("Unable to clear ALUA secondary state OFFLINE for LUN: " + lun + " on " + iqn + " " + tpgt)
+	else:
+		print "Successfully cleared ALUA secondary state OFFLINE for LUN: " + lun + " on " + iqn + " " + tpgt
 	return
 
 def lio_target_show_chap_auth(option, opt_str, value, parser):
@@ -564,6 +598,8 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 				port_dir = lun_root + "/" + lun
 				for port in os.listdir(port_dir):
 					if port == "alua_tg_pt_gp":
+						continue
+					if port == "alua_tg_pt_offline":
 						continue
 					
 					port_link = port_dir + "/" + port
@@ -735,6 +771,8 @@ def main():
 		type="string", dest="TARGET_IQN TPGT LUN PORT_ALIAS TCM_HBA/DEV ", help="Create LIO-Target Logical Unit")
 	parser.add_option("--addtpg", action="callback", callback=lio_target_add_tpg, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Create LIO-Target portal group")
+        parser.add_option("--cleartgptoff","--clearaluaoff", action="callback", callback=lio_target_alua_clear_tgpt_offline, nargs=3,
+                type="string", dest="TARGET_IQN TPGT LUN", help="Clear ALUA Target Port Secondary State OFFLINE")
 	parser.add_option("--dellunacl", action="callback", callback=lio_target_del_lunacl, nargs=4,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN MAPPED_LUN", help="Delete iSCSI Initiator LUN ACL from LIO-Target Portal Group LUN")
 	parser.add_option("--delnodeacl", action="callback", callback=lio_target_del_nodeacl, nargs=3,
@@ -779,8 +817,10 @@ def main():
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER_IN PASS_IN", help="Set CHAP mutual authentication information for iSCSI Initiator Node ACL");
 	parser.add_option("--setnodetcq", action="callback", callback=lio_target_set_node_tcq, nargs=4,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN DEPTH", help="Set iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
-	parser.add_option("--settgptgp", action="callback", callback=lio_target_alua_set_tgptgp, nargs=4,
+	parser.add_option("--settgptgp","--setaluatpg", action="callback", callback=lio_target_alua_set_tgptgp, nargs=4,
 		type="string", dest="TARGET_IQN TPGT LUN TG_PT_GP_NAME", help="Set ALUA Target Port Group for LIO-Target Port/LUN")
+	parser.add_option("--settgptoff","--setaluaoff", action="callback", callback=lio_target_alua_set_tgpt_offline, nargs=3,
+		type="string", dest="TARGET_IQN TPGT LUN", help="Set ALUA Target Port Secondary State OFFLINE")
 	parser.add_option("--showchapauth", action="callback", callback=lio_target_show_chap_auth, nargs=3,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show CHAP authentication information for iSCSI Initiator Node ACL");
 	parser.add_option("--shownodetcq", action="callback", callback=lio_target_show_node_tcq, nargs=3,
