@@ -29,9 +29,9 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 
 	print "modprobe target_core_mod"
 
-	# Loop through ALUA Logical Unit and Target Port groups
-	# Note that the 'default_lu_gp' and 'default_tg_pt_gp' are automatically
-	# created when target_core_mod is loaded.
+	# Loop through ALUA Logical Unit Groups
+	# Note that the 'default_lu_gp' is automatically created when
+	# target_core_mod is loaded.
 	print "#### ALUA Logical Unit Groups"
 	for lu_gp in os.listdir(tcm_root + "/alua/lu_gps"):	
 		if lu_gp == "default_lu_gp":
@@ -45,20 +45,6 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 		if not value:
 			continue
 		print "echo " + value.rstrip() + " > " + lu_gp_id_file
-
-	print "#### ALUA Target Port Groups"
-	for tg_pt_gp in os.listdir(tcm_root + "/alua/tg_pt_gps"):
-		if tg_pt_gp == "default_tg_pt_gp":
-			continue
-
-		print "mkdir -p " + tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp
-		tg_pt_gp_id_file = tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp + "/tg_pt_gp_id"
-		p = os.open(tg_pt_gp_id_file, 0)
-		value = os.read(p, 8)
-		os.close(p)
-		if not value:
-			continue
-		print "echo " + value.rstrip() + " > " + tg_pt_gp_id_file
 
 	# Loop through HBA list
 	for f in os.listdir(tcm_root):
@@ -153,6 +139,23 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 				# the 'default_lu_gp'
 				if not re.search(lu_gp_name, 'default_lu_gp'):
 					print "echo " + lu_gp_name + " > " + lu_gp_file
+
+			# Loop through ALUA Target Port Groups 
+			# Note that the 'default_tg_pt_gp' is automatically created when
+			# /sys/kernel/config/target/core/$HBA/$DEV is created
+			print "#### ALUA Target Port Groups"
+			for tg_pt_gp in os.listdir(dev_root + g + "/alua/"):
+				if tg_pt_gp == "default_tg_pt_gp":
+					continue
+
+				print "mkdir -p " + dev_root + g + "/alua/" + tg_pt_gp
+				tg_pt_gp_id_file = dev_root + g + "/alua/" + tg_pt_gp + "/tg_pt_gp_id"
+				p = os.open(tg_pt_gp_id_file, 0)
+				value = os.read(p, 8)
+				os.close(p)
+				if not value:
+					continue
+				print "echo " + value.rstrip() + " > " + tg_pt_gp_id_file
 
 			# Dump device attributes
 			print "#### Attributes for " + dev_root + g

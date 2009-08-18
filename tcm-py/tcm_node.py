@@ -49,20 +49,25 @@ def tcm_add_alua_lugp(option, opt_str, value, parser):
 	return
 
 def tcm_add_alua_tgptgp(option, opt_str, value, parser):
-	tg_pt_gp_name = str(value)
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	if os.path.isdir(tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp_name):
+	tg_pt_gp_name = str(value[1])
+
+	if os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
 		tcm_err("ALUA Target Port Group: " + tg_pt_gp_name + " already exists!")
 
-	mkdir_op = "mkdir -p " + tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp_name
+	mkdir_op = "mkdir -p " + cfs_dev_path + "/alua/" + tg_pt_gp_name
 	ret = os.system(mkdir_op)
 	if ret:
 		tcm_err("Unable to create ALUA Target Port Group: " + tg_pt_gp_name)
 
-	set_tg_pt_gp_op = "echo 0 > " + tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp_name + "/tg_pt_gp_id"
+	set_tg_pt_gp_op = "echo 0 > " + cfs_dev_path + "/alua/" + tg_pt_gp_name + "/tg_pt_gp_id"
 	ret = os.system(set_tg_pt_gp_op)
 	if ret:
-		rmdir_op = "rmdir " + tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp_name
+		rmdir_op = "rmdir " + cfs_dev_path + "/alua/" + tg_pt_gp_name
 		os.system(rmdir_op)
 		tcm_err("Unable to set ID for ALUA Target Port Group: " + tg_pt_gp_name)
 	else:
@@ -108,12 +113,16 @@ def tcm_del_alua_lugp(option, opt_str, value, parser):
 	return
 
 def tcm_del_alua_tgptgp(option, opt_str, value, parser):
-	tg_pt_gp_name = str(value)
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	if not os.path.isdir(tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp_name):
+	tg_pt_gp_name = str(value[1])
+	if not os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
 		tcm_err("ALUA Target Port Group: " + tg_pt_gp_name + " does not exist!")
 
-	rmdir_op = "rmdir " + tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp_name
+	rmdir_op = "rmdir " + cfs_dev_path + "/alua/" + tg_pt_gp_name
 	ret = os.system(rmdir_op)
 	if ret:
 		tcm_err("Unable to delete ALUA Target Port Group: " + tg_pt_gp_name)
@@ -388,6 +397,13 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 	if os.path.isdir(snap_attr_path) == True:
 		tcm_snapshot_stop(None, None, value, None)
 
+	for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
+		if tg_pt_gp == "default_tg_pt_gp":
+			continue
+
+		vals = [value, tg_pt_gp]
+		tcm_del_alua_tgptgp(None, None, vals, None)
+
 	ret = os.rmdir(cfs_dev_path)
 	if not ret:
 		print "Successfully released TCM/ConfigFS storage object: " + cfs_dev_path
@@ -476,30 +492,95 @@ def tcm_list_alua_lugps(option, opt_str, value, parser):
 
 	return
 
-def tcm_list_alua_tgptgps(option, opt_str, value, parser):
+def tcm_dump_alua_state(alua_state_no):
+	
+	if alua_state_no == "0":
+		return "Active/Optimized"
+	elif alua_state_no == "1":
+		return "Active/NonOptimized"
+	elif alua_state_no == "2":
+		return "Standby"
+	elif alua_state_no == "3":
+		return "Unavailable"
+	elif alua_state_no == "15":
+		return "Transition"
 
-	for tg_pt_gp in os.listdir(tcm_root + "/alua/tg_pt_gps"):
-		p = os.open(tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp + "/tg_pt_gp_id", 0)
-		value = os.read(p, 8)
-		tg_pt_gp_id = value.rstrip()
+	return ""
+
+def tcm_list_alua_tgptgp(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tg_pt_gp = str(value[1])
+	tg_pt_gp_base = cfs_dev_path + "/alua/" + tg_pt_gp
+	
+	if (os.path.isdir(tg_pt_gp_base) == False):
+		tcm_err("Unable to access tg_pt_gp_base: " + tg_pt_gp_base)
+
+	p = os.open(tg_pt_gp_base + "/tg_pt_gp_id", 0)
+	value = os.read(p, 8)
+	tg_pt_gp_id = value.rstrip()
+	os.close(p)
+	print "\------> " + tg_pt_gp + "  Target Port Group ID: " + tg_pt_gp_id
+
+	p = os.open(tg_pt_gp_base + "/alua_access_type", 0)
+	value = os.read(p, 32)
+	alua_type = value.rstrip()
+	os.close(p)
+	print "         Active ALUA Access Type(s): " + alua_type
+
+	p = os.open(tg_pt_gp_base + "/alua_access_state", 0)
+	value = os.read(p, 8)
+	alua_state = tcm_dump_alua_state(value.rstrip())
+	os.close(p)
+	print "         Primary Access State: " + alua_state
+
+	if (os.path.isfile(tg_pt_gp_base + "/alua_access_status") == True):
+		p = os.open(tg_pt_gp_base + "/alua_access_status", 0)
+		value = os.read(p, 32)
 		os.close(p)
-		print "\------> " + tg_pt_gp + "  Target Port Group ID: " + tg_pt_gp_id
+		print "         Primary Access Status: " + value.rstrip()
 
-		p = os.open(tcm_root + "/alua/tg_pt_gps/" + tg_pt_gp + "/members", 0)
-		value = os.read(p, 4096)
-		tg_pt_gp_members = value.split('\n');
-		os.close(p)
+	p = os.open(tg_pt_gp_base + "/preferred", 0)
+	value = os.read(p, 8)
+	os.close(p)
+	print "         Preferred Bit: " + value.rstrip()
 
-		if len(tg_pt_gp_members) == 1:
-			print "         No Target Port Group Members"
-			continue
+	p = os.open(tg_pt_gp_base + "/nonop_delay_msecs", 0)
+	value = os.read(p, 8)
+	os.close(p)
+	print "         Active/NonOptimized Delay in milliseconds: " + value.rstrip()
 
-		i = 0
-		while i < len(tg_pt_gp_members) - 1:
-			print "         " + tg_pt_gp_members[i]
-			i += 1
+	p = os.open(tg_pt_gp_base + "/members", 0)
+	value = os.read(p, 4096)
+	tg_pt_gp_members = value.split('\n');
+	os.close(p)
+
+	print "         \------> TG Port Group Members"
+	if len(tg_pt_gp_members) == 1:
+		print "             No Target Port Group Members"
+		return
+
+	i = 0
+	while i < len(tg_pt_gp_members) - 1:
+		print "             " + tg_pt_gp_members[i]
+		i += 1
 
         return
+
+def tcm_list_alua_tgptgps(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
+		vals = [str(value), tg_pt_gp]
+		tcm_list_alua_tgptgp(None, None, vals, None)
+
+	return
 
 def tcm_snapshot_attr_set(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -691,6 +772,132 @@ def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 
 	return
 
+def tcm_set_alua_state(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	alua_gp = str(value[1])
+	new_alua_state_str = str(value[2])
+	new_alua_state_str = new_alua_state_str.lower()
+	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
+	alua_state = 0;
+
+	if new_alua_state_str == "o":
+		alua_state = 0; # Active/Optimized
+	elif new_alua_state_str == "a":
+		alua_state = 1 # Active/NonOptimized
+	elif new_alua_state_str == "s":
+		alua_state = 2 # Standby
+	elif new_alua_state_str == "u":
+		alua_state = 3
+	else:
+		tcm_err("Unknown ALUA access state: " + new_alua_state_str)
+
+	set_alua_state_op = "echo " + str(alua_state) + " > " + tg_pt_gp_base + "/alua_access_state"
+	ret = os.system(set_alua_state_op)
+	if ret:
+		tcm_err("Unable to set primary ALUA access state for TG PT Group: " + tg_pt_gp_base)
+	else:
+		print "Successfully set primary ALUA access state for TG PT Group: " + alua_gp + " to " + tcm_dump_alua_state(str(alua_state))
+
+	return
+
+def tcm_set_alua_type(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	alua_gp = str(value[1])
+	new_alua_type_str = str(value[2])
+	new_alua_type_str = new_alua_type_str.lower()
+	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
+	alua_type = 0
+
+	if new_alua_type_str == "both":
+		alua_type = 3
+	elif new_alua_type_str == "explict":
+		alua_type = 2
+	elif new_alua_type_str == "implict":
+		alua_type = 1
+	elif new_alua_type_str == "none":
+		alua_type = 0
+	else:
+		tcm_err("Unknown ALUA access type: " + new_alua_type_str)
+
+	set_alua_type_op = "echo " + str(alua_type) + " > " + tg_pt_gp_base + "/alua_access_type"
+	ret = os.system(set_alua_type_op)
+	if ret:
+		tcm_err("Unable to set ALUA access type for TG PT Group: " + tg_pt_gp_base)
+	else:
+		print "Successfully set ALUA access type for TG PT Group: " + alua_gp + " to " + new_alua_type_str
+
+	return
+
+def tcm_set_alua_nonop_delay(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	alua_gp = str(value[1])
+	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
+	if (os.path.isdir(tg_pt_gp_base) == False):
+		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
+
+	delay_msecs = str(value[2])
+
+	set_nonop_delay_msecs_op = "echo " + delay_msecs + " > " + tg_pt_gp_base + "/nonop_delay_msecs"
+	ret = os.system(set_nonop_delay_msecs_op)
+	if ret:
+		tcm_err("Unable to set ALUA Active/NonOptimized Delay for TG PT Group: " + tg_pt_gp_base)
+	else:
+		print "Successfully set ALUA Active/NonOptimized Delay to " + delay_msecs + " milliseconds for TG PT Group: " + tg_pt_gp_base
+	
+	return
+
+def tcm_clear_alua_tgpt_pref(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	alua_gp = str(value[1])
+	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
+	if (os.path.isdir(tg_pt_gp_base) == False):
+		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
+
+	set_tg_pt_gp_pref_op = "echo 0 > " + tg_pt_gp_base + "/preferred"
+	ret = os.system(set_tg_pt_gp_pref_op)
+	if ret:
+		tcm_err("Unable to disable PREFERRED bit for TG Pt Group: " + alua_gp)
+	else:
+		print "Successfully disabled PREFERRED bit for TG Pt Group: " + alua_gp
+
+	return
+
+def tcm_set_alua_tgpt_pref(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	alua_gp = str(value[1])
+	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
+	if (os.path.isdir(tg_pt_gp_base) == False):
+		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
+
+	set_tg_pt_gp_pref_op = "echo 1 > " + tg_pt_gp_base + "/preferred"
+	ret = os.system(set_tg_pt_gp_pref_op)
+	if ret:
+		tcm_err("Unable to enable PREFERRED bit for TG Pt Group: " + alua_gp)
+	else:
+		print "Successfully enabled PREFERRED bit for TG Pt Group: " + alua_gp
+
+	return
+
 def tcm_set_alua_lugp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -795,12 +1002,6 @@ def tcm_unload(option, opt_str, value, parser):
 
 		tcm_delhba(None, None, f, None)
 
-	for tg_pt_gp in os.listdir(tcm_root + "/alua/tg_pt_gps"):
-		if tg_pt_gp == "default_tg_pt_gp":
-			continue
-
-		tcm_del_alua_tgptgp(None, None, tg_pt_gp, None)		
-
 	for lu_gp in os.listdir(tcm_root + "/alua/lu_gps"):
 		if lu_gp == "default_lu_gp":
 			continue
@@ -824,16 +1025,18 @@ def main():
 	parser = OptionParser()
 	parser.add_option("--addlungp", action="callback", callback=tcm_add_alua_lugp, nargs=1,
 			type="string", dest="lu_gp_name", help="Add ALUA Logical Unit Group")
-	parser.add_option("--addtgptgp", action="callback", callback=tcm_add_alua_tgptgp, nargs=1,
-			type="string", dest="tg_pt_gp_name", help="Add ALUA Target Port Group")
+	parser.add_option("--addtgptgp","--addaluatpg", action="callback", callback=tcm_add_alua_tgptgp, nargs=2,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="Add ALUA Target Port Group to Storage Object")
 	parser.add_option("--block","--iblock", action="callback", callback=tcm_create_iblock, nargs=2,
 			type="string", dest="HBA/DEV <UDEV_PATH>", help="Associate TCM/IBLOCK object with Linux/BLOCK device")
+	parser.add_option("--clearaluapref", action="callback", callback=tcm_clear_alua_tgpt_pref, nargs=2,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="Clear ALUA Target Port Group Preferred Bit")
 	parser.add_option("--delhba", action="callback", callback=tcm_delhba, nargs=1,
 			type="string", dest="HBA", help="Delete TCM Host Bus Adapter (HBA)")
 	parser.add_option("--dellungp", action="callback", callback=tcm_del_alua_lugp, nargs=1,
 			type="string", dest="lu_gp_name", help="Delete ALUA Logical Unit Group")
-	parser.add_option("--deltgptgp", action="callback", callback=tcm_del_alua_tgptgp, nargs=1,
-			type="string", dest="tg_pt_gp_name", help="Delete ALUA Target Port Group")
+	parser.add_option("--deltgptgp","--delaluatpg", action="callback", callback=tcm_del_alua_tgptgp, nargs=2,
+			type="string", dest="HBA/DEV TG_PT_GP_NAME", help="Delete ALUA Target Port Group from Storage Object")
 	parser.add_option("--createdev", action="callback", callback=tcm_createvirtdev, nargs=2,
 			type="string", dest="HBA/DEV <SUBSYSTEM_PARAMS>", help="Create TCM Storage Object using subsystem dependent parameters, and generate new T10 Unit Serial for IBLOCK,FILEIO,RAMDISK")
 	parser.add_option("--establishdev", action="callback", callback=tcm_establishvirtdev, nargs=2,
@@ -848,8 +1051,10 @@ def main():
 			help="List TCM Host Bus Adapters (HBAs)")
         parser.add_option("--listlugps", action="callback", callback=tcm_list_alua_lugps, nargs=0,
                         help="List ALUA Logical Unit Groups")
-        parser.add_option("--listtgptgps", action="callback", callback=tcm_list_alua_tgptgps, nargs=0,
-                        help="List ALUA Target Port Groups");
+	parser.add_option("--listtgptgp","--listaluatpg", action="callback", callback=tcm_list_alua_tgptgp, nargs=2,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="List specific ALUA Target Port Group for Storage Object")
+        parser.add_option("--listtgptgps","--listaluatpgs", action="callback", callback=tcm_list_alua_tgptgps, nargs=1,
+                        type="string", dest="HBA/DEV", help="List all ALUA Target Port Groups for Storage Object");
 	parser.add_option("--lvsnapattrset", action="callback", callback=tcm_snapshot_attr_set, nargs=2,
 			type="string", dest="HBA/DEV ATTR=VALUE", help="Set LV snapshot configfs attributes for TCM/IBLOCK storage object");
 	parser.add_option("--lvsnapattrshow", action="callback", callback=tcm_snapshot_attr_show, nargs=1,
@@ -874,6 +1079,14 @@ def main():
 			type="string", dest="HBA/DEV <C:T:L>", help="Associate TCM/pSCSI object with Linux/SCSI device by bus location")
 	parser.add_option("--scsibyudev", "--pscsibyudev", action="callback", callback=tcm_create_pscsibyudev, nargs=2,
 			type="string", dest="DEV <UDEV_PATH>", help="Associate TCM/pSCSI object with Linux/SCSI device by UDEV Path")
+	parser.add_option("--setaluadelay", action="callback", callback=tcm_set_alua_nonop_delay, nargs=3,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <NON_OP_DELAY_IN_MSECS>", help="Set ALUA Target Port Group delay for Active/NonOptimized in milliseconds")
+	parser.add_option("--setaluapref", action="callback", callback=tcm_set_alua_tgpt_pref, nargs=2,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="Set ALUA Target Port Group Preferred Bit")
+	parser.add_option("--setaluastate", action="callback", callback=tcm_set_alua_state, nargs=3,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <ALUA_ACCESS_STATE>", help="Set ALUA access state for TG_PT_GP_NAME on Storage Object.  The value access states are \"o\" = active/optimized, \"a\" = active/nonoptimized, \"s\" = standby, \"u\" = unavailable")
+	parser.add_option("--setaluatype", action="callback", callback=tcm_set_alua_type, nargs=3,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <ALUA_ACCESS_TYPE>", help="Set ALUA access type for TG_PT_GP_NAME on Storage Object.  The value type states are \"both\" = implict/explict, \"explict\", \"implict\", or \"none\"")
 	parser.add_option("--setdevattr", action="callback", callback=tcm_set_dev_attrib, nargs=3,
 			type="string", dest="HBA/DEV <ATTRIB> <VALUE>", help="Set new value for TCM storage object device attribute")
 	parser.add_option("--setlugp", action="callback", callback=tcm_set_alua_lugp, nargs=2,
