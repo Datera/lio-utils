@@ -143,19 +143,20 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 			# Loop through ALUA Target Port Groups 
 			# Note that the 'default_tg_pt_gp' is automatically created when
 			# /sys/kernel/config/target/core/$HBA/$DEV is created
-			print "#### ALUA Target Port Groups"
-			for tg_pt_gp in os.listdir(dev_root + g + "/alua/"):
-				if tg_pt_gp == "default_tg_pt_gp":
-					continue
+			if os.path.isdir(dev_root + g + "/alua/") == True:
+				print "#### ALUA Target Port Groups"
+				for tg_pt_gp in os.listdir(dev_root + g + "/alua/"):
+					if tg_pt_gp == "default_tg_pt_gp":
+						continue
 
-				print "mkdir -p " + dev_root + g + "/alua/" + tg_pt_gp
-				tg_pt_gp_id_file = dev_root + g + "/alua/" + tg_pt_gp + "/tg_pt_gp_id"
-				p = os.open(tg_pt_gp_id_file, 0)
-				value = os.read(p, 8)
-				os.close(p)
-				if not value:
-					continue
-				print "echo " + value.rstrip() + " > " + tg_pt_gp_id_file
+					print "mkdir -p " + dev_root + g + "/alua/" + tg_pt_gp
+					tg_pt_gp_id_file = dev_root + g + "/alua/" + tg_pt_gp + "/tg_pt_gp_id"
+					p = os.open(tg_pt_gp_id_file, 0)
+					value = os.read(p, 8)
+					os.close(p)
+					if not value:
+						continue
+					print "echo " + value.rstrip() + " > " + tg_pt_gp_id_file
 
 			# Dump device attributes
 			print "#### Attributes for " + dev_root + g
