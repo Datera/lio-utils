@@ -133,7 +133,7 @@ sub check_and_define
 
 sub LIO_VERSION
 {
-    my $lio_ver = "3.0";
+    my $lio_ver = "3.1";
     my $lio_utils_git_rev = `git rev-list --max-count=1 HEAD`;
     chomp($lio_utils_git_rev);
     my $lio_utils_rev = substr $lio_utils_git_rev, 0, 8;
