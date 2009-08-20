@@ -363,6 +363,8 @@ sub make_target_user_rpm
 							mode => 755},
 			"$py_inst_dir/tcm_dump.py" => { original => "tcm-py/tcm_dump.py",
 							mode => 755},
+			"$py_inst_dir/tcm_snap.py" => { original => "tcm-py/tcm_snap.py",
+						        mode => 755},
 			"/sbin/iscsi-name"         => { original => "tools/iscsi-name",
 							mode => 755},
 			"$py_inst_dir/lio_node.py" => { original => "lio-py/lio_node.py",
@@ -373,12 +375,14 @@ sub make_target_user_rpm
 
     $iscsid->{post} .= "if [ ! -h /usr/sbin/tcm_node ]; then ln -s $py_inst_dir/tcm_node.py /usr/sbin/tcm_node; fi; ";
     $iscsid->{post} .= "if [ ! -h /usr/sbin/tcm_dump ]; then ln -s $py_inst_dir/tcm_dump.py /usr/sbin/tcm_dump ; fi; ";
+    $iscsid->{post} .= "if [ ! -h /usr/sbin/tcm_snap ]; then ln -s $py_inst_dir/tcm_snap.py /usr/sbin/tcm_snap ; fi; ";
     $iscsid->{post} .= "if [ ! -h /usr/sbin/lio_node ]; then ln -s $py_inst_dir/lio_node.py /usr/sbin/lio_node ; fi;";
     $iscsid->{post} .= "if [ ! -h /usr/sbin/lio_dump ]; then ln -s $py_inst_dir/lio_dump.py /usr/sbin/lio_dump ; fi;";
 
     $iscsid->{preun} .= "if [ \"$1\" = \"0\" ] ; then ";
     $iscsid->{preun} .= "	unlink /usr/sbin/tcm_node ;";
     $iscsid->{preun} .= "	unlink /usr/sbin/tcm_dump ;";
+    $iscsid->{preun} .= "       unlink /usr/sbin/tcm_snap ;";
     $iscsid->{preun} .= "	unlink /usr/sbin/lio_node ;";
     $iscsid->{preun} .= "	unlink /usr/sbin/lio_dump ;";
     $iscsid->{preun} .= "fi; ";
@@ -388,8 +392,8 @@ sub make_target_user_rpm
 		    	    { "$py_inst_dir/tcm_iblock.pyc" }, { "$py_inst_dir/tcm_iblock.pyo" },
 			    { "$py_inst_dir/tcm_fileio.pyc" }, { "$py_inst_dir/tcm_fileio.pyo" },
 			    { "$py_inst_dir/tcm_ramdisk.pyc" }, { "$py_inst_dir/tcm_ramdisk.pyo" },
-			    { "$py_inst_dir/tcm_dump.pyc" }, { "$py_inst_dir/tcm_dump.pyo" };
-
+			    { "$py_inst_dir/tcm_dump.pyc" }, { "$py_inst_dir/tcm_dump.pyo" },
+			    { "$py_inst_dir/tcm_snap.pyc" }, { "$py_inst_dir/tcm_snap.pyo" };
 
     if ($ostype->{DISTRO} eq "SUSE")
     {
