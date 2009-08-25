@@ -35,8 +35,8 @@ endif
 	fi
 
 deinstall:
-	cd tcm-py ; uninstall.sh
-	cd lio-py ; uninstall.sh
+	cd tcm-py ; sh uninstall.sh
+	cd lio-py ; sh uninstall.sh
 
 clean:
 	cd tcm-py ; python setup.py clean
