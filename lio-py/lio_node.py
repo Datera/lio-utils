@@ -14,6 +14,7 @@ def lio_err(msg):
 
 def lio_target_del_iqn(option, opt_str, value, parser):
 	iqn = str(value);
+	iqn = iqn.lower();
 
 # Loop through LIO-Target IQN+TPGT list
 	tpg_root = os.listdir(lio_root + "/" + iqn); 
@@ -56,6 +57,7 @@ def lio_target_del_iqn(option, opt_str, value, parser):
 
 def lio_target_del_tpg(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	rmdir_op = "rmdir " + lio_root + "/" + iqn + "/tpgt_" + tpgt
@@ -70,6 +72,7 @@ def lio_target_del_tpg(option, opt_str, value, parser):
 
 def lio_target_add_np(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	np = str(value[2]);
 
@@ -106,6 +109,7 @@ def lio_target_add_np(option, opt_str, value, parser):
 
 def lio_target_del_np(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	np = str(value[2]);
 
@@ -121,6 +125,7 @@ def lio_target_del_np(option, opt_str, value, parser):
 
 def lio_target_add_port(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	lun = str(value[2]);
 	port_name = str(value[3]);
@@ -151,6 +156,7 @@ def lio_target_add_port(option, opt_str, value, parser):
 
 def lio_target_add_tpg(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	tpg_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt
@@ -168,6 +174,7 @@ def lio_target_add_tpg(option, opt_str, value, parser):
 
 def lio_target_del_port(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	lun = str(value[2]);
 
@@ -198,6 +205,7 @@ def lio_target_del_port(option, opt_str, value, parser):
 
 def lio_target_tpg_disableauth(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	
 	enable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/authentication"
@@ -211,6 +219,7 @@ def lio_target_tpg_disableauth(option, opt_str, value, parser):
 
 def lio_target_tpg_demomode(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/generate_node_acls"
@@ -224,8 +233,10 @@ def lio_target_tpg_demomode(option, opt_str, value, parser):
 
 def lio_target_disable_lunwp(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 	mapped_lun = str(value[3]);
 
 	disable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/write_protect"
@@ -239,6 +250,7 @@ def lio_target_disable_lunwp(option, opt_str, value, parser):
 
 def lio_target_enable_auth(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/authentication"
@@ -251,8 +263,10 @@ def lio_target_enable_auth(option, opt_str, value, parser):
 
 def lio_target_enable_lunwp(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 	mapped_lun = str(value[3]);
 
 	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/write_protect"
@@ -266,6 +280,7 @@ def lio_target_enable_lunwp(option, opt_str, value, parser):
 
 def lio_target_enable_tpg(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	enable_op = "echo 1 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/enable"
@@ -279,6 +294,7 @@ def lio_target_enable_tpg(option, opt_str, value, parser):
 
 def lio_target_disable_tpg(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	disable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/enable"
@@ -292,6 +308,7 @@ def lio_target_disable_tpg(option, opt_str, value, parser):
 
 def lio_target_enableaclmode(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	enable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/attrib/generate_node_acls"
@@ -305,8 +322,10 @@ def lio_target_enableaclmode(option, opt_str, value, parser):
 
 def lio_target_add_lunacl(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 	tpg_lun = str(value[3]);
 	mapped_lun = str(value[4]);
 
@@ -327,8 +346,10 @@ def lio_target_add_lunacl(option, opt_str, value, parser):
 
 def lio_target_del_lunacl(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 	mapped_lun = str(value[3]);
 
 	lun_link_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun
@@ -353,8 +374,10 @@ def lio_target_del_lunacl(option, opt_str, value, parser):
 
 def lio_target_add_nodeacl(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 	
 	addnodeacl_op = "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn
 	ret = os.system(addnodeacl_op)
@@ -367,8 +390,10 @@ def lio_target_add_nodeacl(option, opt_str, value, parser):
 
 def lio_target_del_nodeacl(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 
 	nacl_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn
 	lun_acl_root = os.listdir(nacl_dir)
@@ -390,8 +415,10 @@ def lio_target_del_nodeacl(option, opt_str, value, parser):
 
 def lio_target_set_chap_auth(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 	user = str(value[3]);
 	password = str(value[4]);
 
@@ -416,8 +443,10 @@ def lio_target_set_chap_auth(option, opt_str, value, parser):
 
 def lio_target_set_chap_mutual_auth(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 	user_mutual = str(value[3]);
 	password_mutual = str(value[4]);
 
@@ -442,8 +471,10 @@ def lio_target_set_chap_mutual_auth(option, opt_str, value, parser):
 
 def lio_target_set_node_tcq(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 	depth = str(value[3]);
 
 	setnodetcq_op = "echo " + depth + " > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/cmdsn_depth"
@@ -457,6 +488,7 @@ def lio_target_set_node_tcq(option, opt_str, value, parser):
 
 def lio_target_alua_set_tgptgp(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	lun = str(value[2]);
 	tg_pt_gp_name = str(value[3])
@@ -476,6 +508,7 @@ def lio_target_alua_set_tgptgp(option, opt_str, value, parser):
 
 def lio_target_alua_set_tgpt_offline(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	lun = str(value[2]);
 
@@ -494,6 +527,7 @@ def lio_target_alua_set_tgpt_offline(option, opt_str, value, parser):
 
 def lio_target_alua_clear_tgpt_offline(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	lun = str(value[2]);
 
@@ -511,8 +545,10 @@ def lio_target_alua_clear_tgpt_offline(option, opt_str, value, parser):
 
 def lio_target_show_chap_auth(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 
 	auth_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/auth/"
 
@@ -529,8 +565,10 @@ def lio_target_show_chap_auth(option, opt_str, value, parser):
 
 def lio_target_show_node_tcq(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	initiator_iqn = str(value[2]);
+	initiator_iqn = initiator_iqn.lower();
 
 	nacl = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn
 	if not os.path.isdir(nacl):
@@ -546,6 +584,7 @@ def lio_target_show_node_tcq(option, opt_str, value, parser):
 
 def lio_target_alua_show_tgptgp(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 	lun = str(value[2]);
 
@@ -612,6 +651,7 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 
 def lio_target_list_lunacls(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	iqn_root = os.listdir(lio_root)
@@ -651,6 +691,7 @@ def lio_target_list_lunacls(option, opt_str, value, parser):
 
 def lio_target_list_nodeacls(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	iqn_root = os.listdir(lio_root)
@@ -677,6 +718,7 @@ def lio_target_list_nodeacls(option, opt_str, value, parser):
 
 def lio_target_list_nps(option, opt_str, value, parser):
 	iqn = str(value[0]);
+	iqn = iqn.lower();
 	tpgt = str(value[1]);
 
 	np_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np")
