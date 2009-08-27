@@ -554,6 +554,11 @@ def tcm_list_alua_tgptgp(option, opt_str, value, parser):
 	os.close(p)
 	print "         Active/NonOptimized Delay in milliseconds: " + value.rstrip()
 
+	p = os.open(tg_pt_gp_base + "/trans_delay_msecs", 0)
+	value = os.read(p, 8)
+	os.close(p)
+	print "         Transition Delay in milliseconds: " + value.rstrip()
+
 	p = os.open(tg_pt_gp_base + "/members", 0)
 	value = os.read(p, 4096)
 	tg_pt_gp_members = value.split('\n');
@@ -859,6 +864,28 @@ def tcm_set_alua_nonop_delay(option, opt_str, value, parser):
 	
 	return
 
+def tcm_set_alua_trans_delay(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	alua_gp = str(value[1])
+	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
+	if (os.path.isdir(tg_pt_gp_base) == False):
+		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
+
+	delay_msecs = str(value[2])
+
+	set_trans_delay_msecs_op = "echo " + delay_msecs + " > " + tg_pt_gp_base + "/trans_delay_msecs"
+	ret = os.system(set_trans_delay_msecs_op)
+	if ret:
+		tcm_err("Unable to set ALUA Transition Delay for TG PT Group: " + tg_pt_gp_base)
+	else:
+		print "Successfully set ALUA Transition Delay to " + delay_msecs + " milliseconds for TG PT Group: " + tg_pt_gp_base
+
+	return
+
 def tcm_clear_alua_tgpt_pref(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1086,6 +1113,8 @@ def main():
 			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="Set ALUA Target Port Group Preferred Bit")
 	parser.add_option("--setaluastate", action="callback", callback=tcm_set_alua_state, nargs=3,
 			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <ALUA_ACCESS_STATE>", help="Set ALUA access state for TG_PT_GP_NAME on Storage Object.  The value access states are \"o\" = active/optimized, \"a\" = active/nonoptimized, \"s\" = standby, \"u\" = unavailable")
+	parser.add_option("--setaluatransdelay", action="callback", callback=tcm_set_alua_trans_delay, nargs=3,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <TRANS_DELAY_IN_MSECS>", help="Set ALUA Target Port Group Transition delay")
 	parser.add_option("--setaluatype", action="callback", callback=tcm_set_alua_type, nargs=3,
 			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <ALUA_ACCESS_TYPE>", help="Set ALUA access type for TG_PT_GP_NAME on Storage Object.  The value type states are \"both\" = implict/explict, \"explict\", \"implict\", or \"none\"")
 	parser.add_option("--setdevattr", action="callback", callback=tcm_set_dev_attrib, nargs=3,
