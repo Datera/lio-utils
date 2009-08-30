@@ -75,6 +75,136 @@ def tcm_add_alua_tgptgp(option, opt_str, value, parser):
 
 	return
 
+def tcm_alua_check_metadata_dir(cfs_dev_path):
+
+	unit_serial = tcm_get_unit_serial(cfs_dev_path)
+	alua_path = "/var/target/alua/tpgs_" + unit_serial + "/"
+	if os.path.isdir(alua_path) == True:
+		return
+
+	# Create the ALUA metadata directory for the passed storage object
+	# if it does not already exist.
+	mkdir_op = "mkdir -p " + alua_path
+	ret = os.system(mkdir_op)
+	if ret:
+		tcm_err("Unable to create ALUA metadata directory: " + alua_path)
+
+	return
+
+def tcm_alua_set_write_metadata(alua_cfs_path):
+	alua_write_md_file = alua_cfs_path + "/alua_write_metadata"
+
+	p = open(alua_write_md_file, 'wU')
+	if not p:
+		tcm_err("Unable to open: " + alua_write_md_file)
+	
+	ret = p.write("1")
+	if ret:
+		tcm_err("Unable to enable writeable ALUA metadata for " + alua_write_md_file)
+	
+	p.close()
+	return
+
+def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
+	alua_cfs_path = cfs_dev_path + "/alua/" + tg_pt_gp_name
+	
+	unit_serial = tcm_get_unit_serial(cfs_dev_path)
+	alua_path = "/var/target/alua/tpgs_" + unit_serial + "/" + tg_pt_gp_name
+#	print "Using tg_pt_gp alua_path " + alua_path
+
+	if os.path.isfile(alua_path) == False:
+		# If not pre-existing ALUA metadata exists, go ahead and
+		# allow new ALUA state changes to create and update the
+		# struct file metadata
+		tcm_alua_set_write_metadata(alua_cfs_path)
+		return
+
+	p = open(alua_path, 'rU')
+	if not p:
+		print "Unable to process ALUA metadata for: " + alua_path
+
+	line = p.readline()
+	while line:
+		buf = line.rstrip()
+		
+		if re.search('tg_pt_gp_id=', buf):
+			ex_tg_pt_gp_id = buf[12:]
+#			print "Extracted tg_pt_gp_id: " + ex_tg_pt_gp_id
+
+			if int(ex_tg_pt_gp_id) != int(tg_pt_gp_id):
+				tcm_err("Passed tg_pt_gp_id: " + tg_pt_gp_id + " does not match extracted: " + ex_tg_pt_gp_id)
+
+		elif re.search('alua_access_state=', buf):
+			alua_access_state = buf[21:]
+#			print "Extracted alua_access_state: " + alua_access_state
+			cfs = open(alua_cfs_path + "/alua_access_state", 'wU')
+			if not cfs:
+				tcm_err("Unable to open " + alua_cfs_path + "/alua_access_state")
+
+			ret = cfs.write(alua_access_state)
+			if ret:
+				tcm_err("Unable to set: " + alua_cfs_path + "/alua_access_state")
+
+			cfs.close()
+
+		elif re.search('alua_access_status=', buf):
+			alua_access_status = buf[22:]
+#			print "Extracted alua_access_status " + alua_access_status
+			cfs = open(alua_cfs_path + "/alua_access_status", 'wU')
+			if not cfs:
+				tcm_err("Unable to open " + alua_cfs_path + "/alua_access_status")
+	
+			ret = cfs.write(alua_access_status)
+			if ret:
+				tcm_err("Unable to set: " + alua_cfs_path + "/alua_access_status")
+
+			cfs.close()
+
+		line = p.readline()
+
+	# Now allow changes to ALUA target port group update the struct file metadata
+	# in /var/target/alua/tpgs_$T10_UNIT_SERIAL/$TG_PT_GP_NAME
+	tcm_alua_set_write_metadata(alua_cfs_path)
+	p.close()
+	return	
+			
+
+def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tg_pt_gp_name = str(value[1])
+	tg_pt_gp_id = str(value[2])
+
+	# If the default_tg_pt_gp is passed, we skip the creation (as it already exists)
+	# and just process ALUA metadata
+	if tg_pt_gp_name == 'default_tg_pt_gp' and tg_pt_gp_id == '0':
+		tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id)
+		return
+
+	if os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
+		tcm_err("ALUA Target Port Group: " + tg_pt_gp_name + " already exists!")
+
+	mkdir_op = "mkdir -p " + cfs_dev_path + "/alua/" + tg_pt_gp_name
+	ret = os.system(mkdir_op)
+	if ret:
+		tcm_err("Unable to add existing ALUA Target Port Group: " + tg_pt_gp_name)
+
+	set_tg_pt_gp_op = "echo " + tg_pt_gp_id + " > " + cfs_dev_path + "/alua/" + tg_pt_gp_name + "/tg_pt_gp_id"
+	ret = os.system(set_tg_pt_gp_op)
+	if ret:
+		rmdir_op = "rmdir " + cfs_dev_path + "/alua/" + tg_pt_gp_name
+		os.system(rmdir_op)
+		tcm_err("Unable to set ID for ALUA Target Port Group: " + tg_pt_gp_name)
+	else:
+		print "Successfully added existing ALUA Target Port Group: " + tg_pt_gp_name + " with tg_pt_gp_id: " + tg_pt_gp_id
+
+	# Now process the ALUA metadata for this group
+	tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id)
+	return
+
 def tcm_delhba(option, opt_str, value, parser):
 	hba_name = str(value)
 
@@ -215,7 +345,7 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 
 		if gen_uuid:
                         tcm_generate_uuid_for_unit_serial(cfs_path)
-
+		
 		print "Successfully created TCM/ConfigFS storage object: " + cfs_dev_path
 	else:
 		os.rmdir(cfs_dev_path);
@@ -797,7 +927,7 @@ def tcm_set_alua_state(option, opt_str, value, parser):
 	elif new_alua_state_str == "s":
 		alua_state = 2 # Standby
 	elif new_alua_state_str == "u":
-		alua_state = 3
+		alua_state = 3 # Unavailable
 	else:
 		tcm_err("Unknown ALUA access state: " + new_alua_state_str)
 
@@ -983,8 +1113,8 @@ def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 	if (os.path.isdir(cfs_dev_path) == False):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	wwn_show_op = "echo " + value[1] + " > " + cfs_dev_path + "/wwn/vpd_unit_serial"
-	ret = os.system(wwn_show_op)
+	wwn_set_op = "echo " + value[1] + " > " + cfs_dev_path + "/wwn/vpd_unit_serial"
+	ret = os.system(wwn_set_op)
 	if ret:
 		tcm_err("Unable to set T10 WWN Unit Serial for " + cfs_dev_path)
 
@@ -1055,6 +1185,8 @@ def main():
 			type="string", dest="lu_gp_name", help="Add ALUA Logical Unit Group")
 	parser.add_option("--addtgptgp","--addaluatpg", action="callback", callback=tcm_add_alua_tgptgp, nargs=2,
 			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="Add ALUA Target Port Group to Storage Object")
+	parser.add_option("--addtgptgpwithmd","--addaluatpgwithmd", action="callback", callback=tcm_add_alua_tgptgp_with_md, nargs=3,
+			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <TG_PT_GP_ID>", help="Add ALUA Target Port Group to Storage Object with ID and process ALUA metadata")
 	parser.add_option("--block","--iblock", action="callback", callback=tcm_create_iblock, nargs=2,
 			type="string", dest="HBA/DEV <UDEV_PATH>", help="Associate TCM/IBLOCK object with Linux/BLOCK device")
 	parser.add_option("--clearaluapref", action="callback", callback=tcm_clear_alua_tgpt_pref, nargs=2,

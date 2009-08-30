@@ -69,6 +69,10 @@ if [ ! -d /var/target/pr ]; then
 	mkdir -p /var/target/pr
 fi
 
+if [ ! -d /var/target/alua ]; then
+	mkdir -p /var/target/alua
+fi
+
 ARGS_CHECK=2
 ARGS_COUNT=$#
 
