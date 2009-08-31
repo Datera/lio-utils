@@ -93,6 +93,19 @@ def tcm_alua_check_metadata_dir(cfs_dev_path):
 
 	return
 
+def tcm_alua_delete_metadata_dir(unit_serial):
+
+	alua_path = "/var/target/alua/tpgs_" + unit_serial + "/"
+	if os.path.isdir(alua_path) == False:
+		return;
+
+	rm_op = "rm -rf " + alua_path
+	ret = os.system(rm_op)
+	if ret:
+		tcm_err("Unable to remove ALUA metadata directory: " + alua_path)
+
+	return
+
 def tcm_alua_set_write_metadata(alua_cfs_path):
 	alua_write_md_file = alua_cfs_path + "/alua_write_metadata"
 
@@ -219,7 +232,7 @@ def tcm_delhba(option, opt_str, value, parser):
 			continue;
 
 		tmp_str = hba_name + "/"+ g
-		tcm_freevirtdev(None, None, tmp_str, None)
+		__tcm_freevirtdev(None, None, tmp_str, None)
 
 	ret = os.rmdir(hba_path)
 	if ret:
@@ -369,6 +382,7 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 
 		if gen_uuid:
                         tcm_generate_uuid_for_unit_serial(cfs_path)
+			tcm_alua_check_metadata_dir(cfs_dev_path)
 		
 		print "Successfully created TCM/ConfigFS storage object: " + cfs_dev_path
 	else:
@@ -407,6 +421,19 @@ def tcm_show_aptpl_metadata(option, opt_str, value, parser):
 		tcm_err("Unable to dump PR APTPL metadata file: " + aptpl_file);
 	
 	os.system("cat " + aptpl_file);	
+	return
+
+def tcm_delete_aptpl_metadata(unit_serial):
+
+	aptpl_file = "/var/target/pr/aptpl_" + unit_serial
+	if (os.path.isfile(aptpl_file) == False):
+		return
+
+	rm_op = "rm -rf " + aptpl_file
+	ret = os.system(rm_op)
+	if ret:
+		tcm_err("Unable to delete PR APTPL metadata: " + aptpl_file)
+
 	return
 
 def tcm_process_aptpl_metadata(option, opt_str, value, parser):
@@ -535,7 +562,7 @@ def tcm_create_ramdisk(option, opt_str, value, parser):
 	tcm_createvirtdev(option, opt_str, value, parser)
 	return
 
-def tcm_freevirtdev(option, opt_str, value, parser):
+def __tcm_freevirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_path = cfs_unsplit.split('/')
 	hba_cfs = cfs_path[0]
@@ -565,6 +592,21 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 	else:
 		tcm_err("Failed to release ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret)
 
+	return
+
+def tcm_freevirtdev(option, opt_str, value, parser):
+	cfs_unsplit = str(value)
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	unit_serial = tcm_get_unit_serial(cfs_dev_path)
+
+	__tcm_freevirtdev(option, opt_str, value, parser)
+	# For explict tcm_node --freedev, delete any remaining
+	# PR APTPL and ALUA metadata
+	tcm_delete_aptpl_metadata(unit_serial)
+	tcm_alua_delete_metadata_dir(unit_serial)
 	return
 
 def tcm_list_dev_attribs(option, opt_str, value, parser):
