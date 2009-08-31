@@ -55,6 +55,7 @@ def tcm_add_alua_tgptgp(option, opt_str, value, parser):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	tg_pt_gp_name = str(value[1])
+	alua_cfs_path = cfs_dev_path + "/alua/" + tg_pt_gp_name
 
 	if os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
 		tcm_err("ALUA Target Port Group: " + tg_pt_gp_name + " already exists!")
@@ -71,6 +72,7 @@ def tcm_add_alua_tgptgp(option, opt_str, value, parser):
 		os.system(rmdir_op)
 		tcm_err("Unable to set ID for ALUA Target Port Group: " + tg_pt_gp_name)
 	else:
+		tcm_alua_set_write_metadata(alua_cfs_path)
 		print "Successfully created ALUA Target Port Group: " + tg_pt_gp_name
 
 	return
