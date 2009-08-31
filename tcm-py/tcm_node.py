@@ -1121,6 +1121,20 @@ def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 	print "Set T10 WWN Unit Serial for " + cfs_unsplit + " to: " + value[1]
 	return
 
+def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_set_wwn_unit_serial(None, None, value, None);
+	# Process PR APTPL metadata
+	tcm_process_aptpl_metadata(None, None, cfs_unsplit, None)
+	# Make sure the ALUA metadata directory exists for this storage object
+	tcm_alua_check_metadata_dir(cfs_dev_path)
+
+	return
+
 def tcm_show_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1257,6 +1271,8 @@ def main():
 			type="string", dest="HBA/DEV <udev_path>", help="Set UDEV Path Information, only used when --createdev did not contain <udev_path> as parameter")
 	parser.add_option("--setunitserial", action="callback", callback=tcm_set_wwn_unit_serial, nargs=2,
 			type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information")
+	parser.add_option("--setunitserialwithmd", action="callback", callback=tcm_set_wwn_unit_serial_with_md, nargs=2,
+			type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information and process PR APTPL metadata")
 	parser.add_option("--udevpath", action="callback", callback=tcm_show_udev_path, nargs=1,
 	
 			type="string", dest="HBA/DEV", help="Show UDEV Path Information for TCM storage object")
