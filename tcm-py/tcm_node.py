@@ -242,7 +242,7 @@ def tcm_del_alua_lugp(option, opt_str, value, parser):
 
 	return
 
-def tcm_del_alua_tgptgp(option, opt_str, value, parser):
+def __tcm_del_alua_tgptgp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	if (os.path.isdir(cfs_dev_path) == False):
@@ -259,6 +259,28 @@ def tcm_del_alua_tgptgp(option, opt_str, value, parser):
 	else:
 		print "Successfully deleted ALUA Target Port Group: " + tg_pt_gp_name
 
+	return
+
+def tcm_del_alua_tgptgp(option, opt_str, value, parser):
+	cfs_unsplit = str(value[0])
+	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+	if (os.path.isdir(cfs_dev_path) == False):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	unit_serial = tcm_get_unit_serial(cfs_dev_path)
+	tg_pt_gp_name = str(value[1])
+	alua_md_path = "/var/target/alua/tpgs_" + unit_serial + "/" + tg_pt_gp_name
+
+	__tcm_del_alua_tgptgp(option, opt_str, value, parser)
+
+	if os.path.isfile(alua_md_path) == False:
+		return
+	
+	rm_op = "rm -rf " + alua_md_path
+	ret = os.system(rm_op)
+	if ret:
+		tcm_err("Unable to remove ALUA metadata from: " + alua_md_path)
+	
 	return
 
 def tcm_generate_uuid_for_unit_serial(cfs_dev_path):
@@ -533,7 +555,7 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 				continue
 
 			vals = [value, tg_pt_gp]
-			tcm_del_alua_tgptgp(None, None, vals, None)
+			__tcm_del_alua_tgptgp(None, None, vals, None)
 
 	ret = os.rmdir(cfs_dev_path)
 	if not ret:
