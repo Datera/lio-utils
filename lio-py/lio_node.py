@@ -7,12 +7,127 @@ from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
 lio_root = "/sys/kernel/config/target/iscsi"
+alua_secondary_md_dir = "/var/target/alua/iSCSI/"
 
 def lio_err(msg):
 	print msg
 	sys.exit(1)
 
-def lio_target_del_iqn(option, opt_str, value, parser):
+def lio_alua_check_secondary_md(iqn, tpgt):
+	alua_sec_md_path = alua_secondary_md_dir + iqn + "+" + tpgt + "/"
+	if os.path.isdir(alua_sec_md_path) == False:
+		mkdir_op = "mkdir -p " + alua_sec_md_path	
+		ret = os.system(mkdir_op)
+		if ret:
+			lio_err("Unable to create secondary ALUA MD directory: " + alua_sec_md_path)
+
+	return
+
+def lio_alua_delete_secondary_md(iqn, tpgt):
+	alua_sec_md_path = alua_secondary_md_dir + iqn + "+" + tpgt + "/" 
+	if os.path.isdir(alua_sec_md_path) == False:
+		return
+
+	rm_op = "rm -rf " + alua_sec_md_path
+	ret = os.system(rm_op)
+	if ret:
+		lio_err("Unable to remove secondary ALUA MD directory: " + alua_sec_md_path)
+
+	return
+
+def lio_alua_delete_secondary_md_port(iqn, tpgt, lun):
+
+	alua_sec_md_file = alua_secondary_md_dir + iqn + "+" + tpgt + "/lun_" + lun
+	if os.path.isfile(alua_sec_md_file) == False:
+		return
+
+	rm_op = "rm -rf "+ alua_sec_md_file
+	ret = os.system(rm_op)
+	if ret:
+		lio_err("Unable to delete ALUA secondary metadata file: " + alua_sec_md_file)
+
+	return
+
+def lio_alua_set_secondary_write_md(iqn, tpgt, lun):
+	alua_write_md_file = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun + "/alua_tg_pt_write_md"
+	if os.path.isfile(alua_write_md_file) == False:
+		return
+
+	p = open(alua_write_md_file, 'wU')
+	if not p:
+		lio_err("Unable to open: " + alua_write_md_file)
+
+	ret = p.write("1")
+	if ret:
+		lio_err("Unable to enable writeable ALUA secondary metadata for " + alua_write_md_file)
+
+	p.close()
+	return
+
+def lio_alua_process_secondary_md(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	iqn = iqn.lower();
+	tpgt = str(value[1]);
+	lun = str(value[2]);
+
+	alua_sec_md_file = alua_secondary_md_dir + iqn + "+" + tpgt + "/lun_" + lun
+	if os.path.isfile(alua_sec_md_file) == False:
+		# Use --aluasecmd as a chance to make sure the directory for this
+		# LIO-Target endpoint (iqn+tpgt) exists..
+		lio_alua_check_secondary_md(iqn, tpgt)
+		lio_alua_set_secondary_write_md(iqn, tpgt, lun)
+		lio_err("Unable to locate ALUA secondary metadata file: " + alua_sec_md_file)
+		return
+
+#	print "Using alua_sec_md_file: " + alua_sec_md_file
+	alua_sec_cfs_path = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
+#	print "Using alua_sec_cfs_path: " + alua_sec_cfs_path
+
+	p = open(alua_sec_md_file, 'rU')
+	if not p:
+		print "Unable to process ALUA secondary metadata for: " + alua_sec_md_file
+
+	line = p.readline()
+	while line:
+		buf = line.rstrip()
+
+		if re.search('alua_tg_pt_offline=', buf):
+			alua_tg_pt_offline = buf[19:]
+#			print "Extracted alua_tg_pt_offline: " + alua_tg_pt_offline
+			cfs = open(alua_sec_cfs_path + "/alua_tg_pt_offline", 'wU')
+			if not cfs:
+				p.close()
+				lio_err("Unable to open " + alua_sec_cfs_path + "/alua_tg_pt_offline")
+
+			ret = cfs.write(alua_tg_pt_offline)
+			cfs.close()
+			if ret:
+				p.close()
+				lio_err("Unable to write " + alua_sec_cfs_path + "/alua_tg_pt_offline")
+
+		elif re.search('alua_tg_pt_status=', buf):
+			alua_tg_pt_status = buf[18:]
+#			print "Extracted alua_tg_pt_status: " + alua_tg_pt_status
+			cfs = open(alua_sec_cfs_path + "/alua_tg_pt_status", 'wU')
+			if not cfs:
+				p.close()
+				lio_err("Unable to open " + alua_sec_cfs_path + "/alua_tg_pt_status")
+			
+			ret = cfs.write(alua_tg_pt_status)
+			cfs.close()
+			if ret:
+				p.close()
+				lio_err("Unable to write " + alua_sec_cfs_path + "/alua_tg_pt_status")
+
+		line = p.readline()
+
+	p.close()
+	# Now enable the alua_tg_pt_write_md bit to allow for new updates
+	# to ALUA secondary metadata in struct file for this port
+	lio_alua_set_secondary_write_md(iqn, tpgt, lun)
+	return
+
+def __lio_target_del_iqn(option, opt_str, value, parser, delete_tpg_md):
 	iqn = str(value);
 	iqn = iqn.lower();
 
@@ -40,10 +155,16 @@ def lio_target_del_iqn(option, opt_str, value, parser):
 			lun = lun_tmp2[1]
 
 			lun_val = [iqn,tpgt,lun]        
-			lio_target_del_port(None, None, lun_val, None)
+			if delete_tpg_md == 1:
+				lio_target_del_port(None, None, lun_val, None)
+			else:
+				__lio_target_del_port(None, None, lun_val, None)
 
 		tpg_val = [iqn,tpgt]
-		lio_target_del_tpg(None, None, tpg_val, None)   
+		if delete_tpg_md == 1:
+			lio_target_del_tpg(None, None, tpg_val, None)   
+		else:
+			__lio_target_del_tpg(None, None, tpg_val, None)
 
 	rmdir_op = "rmdir " + lio_root + "/" + iqn
 #	print "rmdir_op: " + rmdir_op
@@ -55,7 +176,23 @@ def lio_target_del_iqn(option, opt_str, value, parser):
 
 	return
 
-def lio_target_del_tpg(option, opt_str, value, parser):
+def lio_target_del_iqn(option, opt_str, value, parser):
+	iqn = str(value);
+	iqn = iqn.lower();
+
+	iqn_dir = lio_root + "/" + iqn
+	if os.path.isdir(iqn_dir) == False:
+		lio_err("Unable to locate iSCSI Target IQN: " + iqn_dir)
+
+	# Passing 1 for delete_tpg_md here means lio_target_del_tpg()
+	# with lio_alua_delete_secondary_md() will get called to delete
+	# all of the secondary ALUA directories for the LIO-Target endpoint
+	# when an explict --deliqn is called.
+	__lio_target_del_iqn(option, opt_str, value, parser, 1)
+
+	return
+
+def __lio_target_del_tpg(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	iqn = iqn.lower();
 	tpgt = str(value[1]);
@@ -68,6 +205,21 @@ def lio_target_del_tpg(option, opt_str, value, parser):
 	else:
 		lio_err("Unable to release iSCSI Target Portal Group: " + iqn + " TPGT: " + tpgt)
 	
+	return
+
+def lio_target_del_tpg(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	iqn = iqn.lower();
+	tpgt = str(value[1]);
+
+	tpgt_file = lio_root + "/" + iqn + "/tpgt_" + tpgt
+	if os.path.isdir(tpgt_file) == False:
+		lio_err("iSCSI Target Port Group: " + tpgt_file + " does not exist")
+	
+	__lio_target_del_tpg(option, opt_str, value, parser)
+	# Delete the ALUA secondary metadata directory on explict --deltpg or
+	# called from --deliqn
+	lio_alua_delete_secondary_md(iqn, tpgt)
 	return
 
 def lio_target_add_np(option, opt_str, value, parser):
@@ -102,6 +254,7 @@ def lio_target_add_np(option, opt_str, value, parser):
 	ret = os.system(mkdir_op)
 	if not ret:
 		print "Successfully created network portal: " + np + " created " + iqn + " TPGT: " + tpgt 
+		lio_alua_check_secondary_md(iqn, tpgt)
 	else:
 		lio_err("Unable to create network portal: " + np + " created " + iqn + " TPGT: " + tpgt)
 
@@ -148,6 +301,8 @@ def lio_target_add_port(option, opt_str, value, parser):
 	ret = os.system(link_op)
 	if not ret:
 		print "Successfully created iSCSI Target Logical Unit"
+		lio_alua_check_secondary_md(iqn, tpgt)
+		lio_alua_set_secondary_write_md(iqn, tpgt, lun)
 	else:
 		os.rmdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun)
 		lio_err("Unable to create iSCSI Target Logical Unit symlink")
@@ -169,10 +324,11 @@ def lio_target_add_tpg(option, opt_str, value, parser):
 		lio_err("Unable to create iSCSI Target Portal Group ConfigFS directory")
 	else:
 		print "Successfully created iSCSI Target Portal Group"
+		lio_alua_check_secondary_md(iqn, tpgt)
 
 	return
 
-def lio_target_del_port(option, opt_str, value, parser):
+def __lio_target_del_port(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	iqn = iqn.lower();
 	tpgt = str(value[1]);
@@ -185,6 +341,10 @@ def lio_target_del_port(option, opt_str, value, parser):
 		if port == "alua_tg_pt_gp":
 			continue
 		if port == "alua_tg_pt_offline":
+			continue
+		if port == "alua_tg_pt_status":
+			continue
+		if port == "alua_tg_pt_write_md":
 			continue
 
 		unlink_op = "unlink " + lun_dir + "/" + port
@@ -200,6 +360,23 @@ def lio_target_del_port(option, opt_str, value, parser):
 		print "Successfully deleted iSCSI Target Logical Unit"
 	else:
 		lio_err("Unable to rmdir iSCSI Target Logical Unit configfs directory")
+
+	return
+
+def lio_target_del_port(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	iqn = iqn.lower();
+	tpgt = str(value[1]);
+	lun = str(value[2]);
+
+	lun_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun
+	if os.path.isdir(lun_dir) == False:
+		lio_err("LIO-Target Port/LUN directory: " + lun_dir + " does not exist")
+
+	__lio_target_del_port(option, opt_str, value, parser)
+	# Delete the ALUA secondary metadata file for this Port/LUN
+	# during an explict --dellun
+	lio_alua_delete_secondary_md_port(iqn, tpgt, lun)
 
 	return
 
@@ -341,6 +518,7 @@ def lio_target_add_lunacl(option, opt_str, value, parser):
 		lio_err("Unable to add iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully added iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_alua_check_secondary_md(iqn, tpgt)
 
 	return
 
@@ -385,6 +563,7 @@ def lio_target_add_nodeacl(option, opt_str, value, parser):
 		lio_err("Unable to add iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 	else:
 		print "Successfully added iSCSI Initaitor ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt
+		lio_alua_check_secondary_md(iqn, tpgt)
 
 	return
 
@@ -640,6 +819,10 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 						continue
 					if port == "alua_tg_pt_offline":
 						continue
+					if port == "alua_tg_pt_status":
+						continue
+					if port == "alua_tg_pt_write_md":
+						continue
 					
 					port_link = port_dir + "/" + port
 					sourcelink = os.readlink(port_link)
@@ -776,12 +959,12 @@ def lio_target_unload(option, opt_str, value, parser):
 				lun = lun_tmp2[1]
 
 				lun_val = [iqn,tpgt,lun]	
-				lio_target_del_port(None, None, lun_val, None)
+				__lio_target_del_port(None, None, lun_val, None)
 
 			tpg_val = [iqn,tpgt]
-			lio_target_del_tpg(None, None, tpg_val, None)	
+			__lio_target_del_tpg(None, None, tpg_val, None)	
 
-		lio_target_del_iqn(None, None, iqn, None)
+		__lio_target_del_iqn(None, None, iqn, None, 0)
 
 	rmdir_op = "rmdir " + lio_root
 	ret = os.system(rmdir_op)
@@ -813,6 +996,8 @@ def main():
 		type="string", dest="TARGET_IQN TPGT LUN PORT_ALIAS TCM_HBA/DEV ", help="Create LIO-Target Logical Unit")
 	parser.add_option("--addtpg", action="callback", callback=lio_target_add_tpg, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="Create LIO-Target portal group")
+	parser.add_option("--aluasecmd", action="callback", callback=lio_alua_process_secondary_md, nargs=3,
+		type="string", dest="TARGET_IQN TPGT LUN", help="Process ALUA secondary metadata for Port/LUN");
         parser.add_option("--cleartgptoff","--clearaluaoff", action="callback", callback=lio_target_alua_clear_tgpt_offline, nargs=3,
                 type="string", dest="TARGET_IQN TPGT LUN", help="Clear ALUA Target Port Secondary State OFFLINE")
 	parser.add_option("--dellunacl", action="callback", callback=lio_target_del_lunacl, nargs=4,

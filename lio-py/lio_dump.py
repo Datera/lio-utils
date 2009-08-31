@@ -47,6 +47,10 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 						continue
 					if port == "alua_tg_pt_offline":
 						continue
+					if port == "alua_tg_pt_status":
+						continue
+					if port == "alua_tg_pt_write_md":
+						continue
 					
 					port_link = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun + "/" + port
 					sourcelink = os.readlink(port_link)
@@ -69,6 +73,8 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 					if not re.search(tg_pt_gp_name, 'default_tg_pt_gp'):
 						print "#### ALUA Target Port Group"
 						print "echo " + tg_pt_gp_name + " > " + tg_pt_gp_file
+
+					print "lio_node --aluasecmd " + iqn + " " + tpgt + " " + lun
 
 			# Dump values of iscsi/iqn/tpgt/attrib/
 			print "#### Attributes for iSCSI Target Portal Group"
