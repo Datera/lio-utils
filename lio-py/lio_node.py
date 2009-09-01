@@ -970,6 +970,29 @@ def lio_target_set_node_attr(option, opt_str, value, parser):
 
 	return
 
+def lio_target_list_node_param(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	iqn = iqn.lower();
+	tpgt = str(value[1]);
+	initiator_iqn = str(value[2])
+
+	param_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/param"
+	if os.path.isdir(param_dir) == False:
+		lio_err("Unable to locate node param_dir: " + param_dir)
+
+	for param in os.listdir(param_dir):
+		p = open(param_dir + "/" + param, 'rU')
+		if not p:
+			lio_err("Unable to open attr: " + param_dir + "/" + param)
+
+		val = p.read()
+		p.close()
+
+		print param + "=" + val.rstrip()
+
+	return
+
+
 def lio_target_list_tpg_attr(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	iqn = iqn.lower();
@@ -1174,6 +1197,8 @@ def main():
 		type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator ACLs for LIO-Target Portal Group")
 	parser.add_option("--listnodeattr", action="callback", callback=lio_target_list_node_attr, nargs=3,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="List iSCSI Initiator ACL attributes for LIO-Target Portal Group")
+	parser.add_option("--listnodeparam", action="callback", callback=lio_target_list_node_param, nargs=3,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="List iSCSI Initiator ACL RFC-3720 parameters for LIO-Target Portal Group")
 	parser.add_option("--listnps", action="callback", callback=lio_target_list_nps, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="List LIO-Target Portal Group Network Portals")
 	parser.add_option("--listtargetnames", action="callback", callback=lio_target_list_targetnames, nargs=0,
