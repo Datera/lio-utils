@@ -923,6 +923,53 @@ def lio_target_list_targetnames(option, opt_str, value, parser):
 
 	return
 
+def lio_target_list_node_attr(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	iqn = iqn.lower();
+	tpgt = str(value[1]);
+	initiator_iqn = str(value[2])
+
+	attr_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/attrib/"
+	if os.path.isdir(attr_dir) == False:
+		lio_err("Unable to locate node attr_dir: " + attr_dir)
+
+	for attr in os.listdir(attr_dir):
+		p = open(attr_dir + "/" + attr, 'rU')
+		if not p:
+			lio_err("Unable to open attr: " + attr_dir + "/" + attr)
+
+		val = p.read()
+		p.close()
+
+		print attr + "=" + val.rstrip()
+	
+	return
+
+def lio_target_set_node_attr(option, opt_str, value, parser):
+	iqn = str(value[0]);
+	iqn = iqn.lower();
+	tpgt = str(value[1]);
+	initiator_iqn = str(value[2])
+	attr = str(value[3])
+	val = str(value[4])
+
+	attr_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/attrib/"
+	if os.path.isdir(attr_dir) == False:
+		lio_err("Unable to locate node attr_dir: " + attr_dir)
+
+	p = open(attr_dir + "/" + attr, 'wU')
+	if not p:
+		lio_err("Unable to open node attr: " + attr_dir + "/" + attr)
+
+	ret = p.write(val)
+	if ret:
+		lio_err("Unable to set node attr: " + attr_dir + "/" + attr)
+
+	p.close()
+	print "Successfully set Initiator Node attribute: " + attr + " to: " + val
+
+	return
+
 def lio_target_list_tpg_attr(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	iqn = iqn.lower();
@@ -964,7 +1011,7 @@ def lio_target_set_tpg_attr(option, opt_str, value, parser):
 		lio_err("Unable to set tpg attr: " + attr_dir + "/" + attr)
 
 	p.close()
-	print "Successfully set TPG attribute: " + attr + " to : " + val
+	print "Successfully set TPG attribute: " + attr + " to: " + val
 
 	return
 
@@ -1079,6 +1126,8 @@ def main():
 		type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator LUN ACLs for LIO-Target Portal Group")
 	parser.add_option("--listnodeacls", action="callback", callback=lio_target_list_nodeacls, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="List iSCSI Initiator ACLs for LIO-Target Portal Group")
+	parser.add_option("--listnodeattr", action="callback", callback=lio_target_list_node_attr, nargs=3,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="List iSCSI Initiator ACL attributes for LIO-Target Portal Group")
 	parser.add_option("--listnps", action="callback", callback=lio_target_list_nps, nargs=2,
 		type="string", dest="TARGET_IQN TPGT", help="List LIO-Target Portal Group Network Portals")
 	parser.add_option("--listtargetnames", action="callback", callback=lio_target_list_targetnames, nargs=0,
@@ -1089,6 +1138,8 @@ def main():
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER PASS", help="Set CHAP authentication information for iSCSI Initiator Node ACL");
 	parser.add_option("--setchapmutualauth", action="callback", callback=lio_target_set_chap_mutual_auth, nargs=5,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER_IN PASS_IN", help="Set CHAP mutual authentication information for iSCSI Initiator Node ACL");
+	parser.add_option("--setnodeattr", action="callback", callback=lio_target_set_node_attr, nargs=5,
+		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN <ATTRIBUTE> <VALUE>",  help="Set iSCSI Initiator ACL Attribute")
 	parser.add_option("--setnodetcq", action="callback", callback=lio_target_set_node_tcq, nargs=4,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN DEPTH", help="Set iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
 	parser.add_option("--settpgattr", action="callback", callback=lio_target_set_tpg_attr, nargs=4,
