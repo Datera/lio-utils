@@ -137,34 +137,11 @@ def __lio_target_del_iqn(option, opt_str, value, parser, delete_tpg_md):
 		tpgt_tmp2 = tpgt_tmp.split('_')
 		tpgt = tpgt_tmp2[1]
 
-		np_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np")
-		for np in np_root:
-			np_val = [iqn,tpgt,np]
-
-			lio_target_del_np(None, None, np_val, None)
-
-		nacl_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls")
-		for nacl in nacl_root:
-			nacl_val = [iqn,tpgt,nacl]
-                                
-			lio_target_del_nodeacl(None, None, nacl_val, None)
-                
-		lun_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun")
-		for lun_tmp in lun_root:
-			lun_tmp2 = lun_tmp.split('_')
-			lun = lun_tmp2[1]
-
-			lun_val = [iqn,tpgt,lun]        
-			if delete_tpg_md == 1:
-				lio_target_del_port(None, None, lun_val, None)
-			else:
-				__lio_target_del_port(None, None, lun_val, None)
-
 		tpg_val = [iqn,tpgt]
 		if delete_tpg_md == 1:
 			lio_target_del_tpg(None, None, tpg_val, None)   
 		else:
-			__lio_target_del_tpg(None, None, tpg_val, None)
+			__lio_target_del_tpg(None, None, tpg_val, None, 0)
 
 	rmdir_op = "rmdir " + lio_root + "/" + iqn
 #	print "rmdir_op: " + rmdir_op
@@ -192,10 +169,41 @@ def lio_target_del_iqn(option, opt_str, value, parser):
 
 	return
 
-def __lio_target_del_tpg(option, opt_str, value, parser):
+def __lio_target_del_tpg(option, opt_str, value, parser, delete_tpg_md):
 	iqn = str(value[0]);
 	iqn = iqn.lower();
 	tpgt = str(value[1]);
+
+	# This will set TPG Status to INACTIVE force all of the iSCSI sessions for this
+	# tiqn+tpgt tuple to be released.
+	disable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/enable"
+	ret = os.system(disable_op)
+	if ret:
+		lio_err("Unable to disable TPG : " + iqn + " TPGT: " + tpgt)
+
+	np_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np")
+	for np in np_root:
+		np_val = [iqn,tpgt,np]
+
+		lio_target_del_np(None, None, np_val, None)
+
+	nacl_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls")
+	for nacl in nacl_root:
+		nacl_val = [iqn,tpgt,nacl]
+
+		lio_target_del_nodeacl(None, None, nacl_val, None)
+
+	lun_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun")
+	for lun_tmp in lun_root:
+		lun_tmp2 = lun_tmp.split('_')
+		lun = lun_tmp2[1]
+
+		lun_val = [iqn,tpgt,lun]
+		if delete_tpg_md == 1:
+			lio_target_del_port(None, None, lun_val, None)
+		else:
+			__lio_target_del_port(None, None, lun_val, None)
+
 
 	rmdir_op = "rmdir " + lio_root + "/" + iqn + "/tpgt_" + tpgt
 #	print "rmdir_op: " + rmdir_op
@@ -216,7 +224,7 @@ def lio_target_del_tpg(option, opt_str, value, parser):
 	if os.path.isdir(tpgt_file) == False:
 		lio_err("iSCSI Target Port Group: " + tpgt_file + " does not exist")
 	
-	__lio_target_del_tpg(option, opt_str, value, parser)
+	__lio_target_del_tpg(option, opt_str, value, parser, 1)
 	# Delete the ALUA secondary metadata directory on explict --deltpg or
 	# called from --deliqn
 	lio_alua_delete_secondary_md(iqn, tpgt)
@@ -1102,28 +1110,8 @@ def lio_target_unload(option, opt_str, value, parser):
 			tpgt_tmp2 = tpgt_tmp.split('_')
 			tpgt = tpgt_tmp2[1]
 
-			np_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np")
-			for np in np_root:
-				np_val = [iqn,tpgt,np]
-
-				lio_target_del_np(None, None, np_val, None)
-
-			nacl_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls")
-			for nacl in nacl_root:
-				nacl_val = [iqn,tpgt,nacl]
-				
-				lio_target_del_nodeacl(None, None, nacl_val, None)
-		
-			lun_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun")
-			for lun_tmp in lun_root:
-				lun_tmp2 = lun_tmp.split('_')	
-				lun = lun_tmp2[1]
-
-				lun_val = [iqn,tpgt,lun]	
-				__lio_target_del_port(None, None, lun_val, None)
-
 			tpg_val = [iqn,tpgt]
-			__lio_target_del_tpg(None, None, tpg_val, None)	
+			__lio_target_del_tpg(None, None, tpg_val, None, 0)	
 
 		__lio_target_del_iqn(None, None, iqn, None, 0)
 
