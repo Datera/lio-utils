@@ -4,8 +4,8 @@ CWD=$(shell pwd)
 default:: all
 
 all:
-	cd tcm-py ; python setup.py install
-	cd lio-py ; python setup.py install
+	cd tcm-py ; python setup.py build
+	cd lio-py ; python setup.py build
 	-if test -d tools; then make -C tools; fi;
 ifeq ($(SNMP_FEATURE), 1)
 	-if test -d mib-modules; then make -C mib-modules; fi;
