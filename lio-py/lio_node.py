@@ -656,70 +656,6 @@ def lio_target_set_chap_mutual_auth(option, opt_str, value, parser):
 	
 	return
 
-def lio_target_set_chap_discovery_auth(option, opt_str, value, parser):
-	user = str(value[0]);
-	password = str(value[1]);
-
-        auth_dir = lio_root + "/discovery_auth"
-        if not os.path.isdir(auth_dir):
-                lio_err("iSCSI Discovery Authentication directory " + auth_dir + " does not exist")
-
-        setuser_op = "echo -n " + user + " > " + auth_dir + "/userid"
-        ret = os.system(setuser_op)
-        if ret:
-		lio_err("Unable to set CHAP username for iSCSI  Discovery Authentication")
-
-        setpassword_op = "echo -n " + password + " > " + auth_dir + "/password"
-        ret = os.system(setpassword_op)
-        if ret:
-                lio_err("Unable to set CHAP password for iSCSI Discovery Authentication")
-        else:
-                print "Successfully set CHAP authentication for iSCSI Discovery Authentication"
-
-	return
-
-def lio_target_set_chap_mutual_discovery_auth(option, opt_str, value, parser):
-	user_mutual = str(value[0]);
-	password_mutual = str(value[1]);
-
-	auth_dir = lio_root + "/discovery_auth"
-	if not os.path.isdir(auth_dir):
-		lio_err("iSCSI Discovery Authentication directory " + auth_dir + " does not exist")
-
-	setuser_op = "echo -n " + user_mutual + " > " + auth_dir + "/userid_mutual"
-	ret = os.system(setuser_op)
-	if ret:
-		lio_err("Unable to set mutual CHAP username for iSCSI Discovery Authentication")
-
-	setpassword_op = "echo -n " + password_mutual + " > " + auth_dir + "/password_mutual"
-	ret = os.system(setpassword_op)
-	if ret:
-		lio_err("Unable to set mutual CHAP password for iSCSI Discovery Authentication")
-	else:
-		print "Successfully set mutual CHAP authentication for iSCSI Discovery Authentication"
-
-	return
-
-def lio_target_set_enforce_discovery_auth(option, opt_str, value, parser):
-	value = str(value);
-	
-	da_attr = lio_root + "/discovery_auth/enforce_discovery_auth"
-	if not os.path.isfile(da_attr):
-		lio_err("iSCSI Discovery Authentication directory does not exist")
-	
-	da_op = "echo " + value + " > " + da_attr;
-	ret = os.system(da_op)
-	if ret:
-		lio_err("Unable to set da_attr: " + da_attr)
-
-	if value == "1":
-		print "Successfully enabled iSCSI Discovery Authentication enforcement"
-	else:
-		print "Successfully disabled iSCSI Discovery Authentication enforcement"
-
-	return
-
-
 def lio_target_set_node_tcq(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	iqn = iqn.lower();
@@ -814,20 +750,6 @@ def lio_target_show_chap_auth(option, opt_str, value, parser):
 
 	return
 
-def lio_target_show_chap_discovery_auth(option, opt_str, value, parser):
-
-	auth_dir = lio_root + "/discovery_auth"
-	if not os.path.isdir(auth_dir):
-		lio_err("iSCSI Discovery Authentication directory " + auth_dir + " does not exist")
-
-	for auth in os.listdir(auth_dir):
-		p = os.open(auth_dir + "/" + auth, 0)
-		value = os.read(p, 256)
-		print auth + ": " + value.rstrip()
-		os.close(p)
-
-	return
-
 def lio_target_show_node_tcq(option, opt_str, value, parser):
 	iqn = str(value[0]);
 	iqn = iqn.lower();
@@ -870,8 +792,6 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 	
 	for iqn in iqn_root:
 		if iqn == "lio_version":
-			continue
-		if iqn == "discovery_auth":
 			continue
 
 		print "\------> " + iqn
@@ -1005,8 +925,6 @@ def lio_target_list_targetnames(option, opt_str, value, parser):
 	# Loop through LIO-Target IQN list
 	for iqn in iqn_root:
 		if iqn == "lio_version":
-			continue
-		if iqn == "discovery_auth":
 			continue
 
 		print iqn	
@@ -1185,8 +1103,6 @@ def lio_target_unload(option, opt_str, value, parser):
 	for iqn in iqn_root:
 		if iqn == "lio_version":
 			continue
-		if iqn == "discovery_auth":
-			continue
 
 		# Loop through LIO-Target IQN+TPGT list
 		tpg_root = os.listdir(lio_root + "/" + iqn);
@@ -1283,12 +1199,6 @@ def main():
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER PASS", help="Set CHAP authentication information for iSCSI Initiator Node ACL");
 	parser.add_option("--setchapmutualauth", action="callback", callback=lio_target_set_chap_mutual_auth, nargs=5,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER_IN PASS_IN", help="Set CHAP mutual authentication information for iSCSI Initiator Node ACL");
-        parser.add_option("--setchapdiscenforce", action="callback", callback=lio_target_set_enforce_discovery_auth, nargs=1,
-                type="string", dest="1=Enforce Discovery Auth, 0=No Discovery Auth", help="Set CHAP authentication enforcement for iSCSI Discovery Sessions");
-        parser.add_option("--setchapdiscauth", action="callback", callback=lio_target_set_chap_discovery_auth, nargs=2,
-                type="string", dest="USER PASS", help="Set CHAP authentication information for iSCSI Discovery Authentication")
-        parser.add_option("--setchapdiscmutualauth", action="callback", callback=lio_target_set_chap_mutual_discovery_auth, nargs=2,
-		type="string", dest="USER PASS", help="Set CHAP mutual authentication information for iSCSI Discovery Authentication")
 	parser.add_option("--setnodeattr", action="callback", callback=lio_target_set_node_attr, nargs=5,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN <ATTRIBUTE> <VALUE>",  help="Set iSCSI Initiator ACL Attribute")
 	parser.add_option("--setnodetcq", action="callback", callback=lio_target_set_node_tcq, nargs=4,
@@ -1303,8 +1213,6 @@ def main():
 		type="string", dest="TARGET_IQN TPGT LUN", help="Set ALUA Target Port Secondary State OFFLINE")
 	parser.add_option("--showchapauth", action="callback", callback=lio_target_show_chap_auth, nargs=3,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show CHAP authentication information for iSCSI Initiator Node ACL");
-	parser.add_option("--showchapdiscauth", action="callback", callback=lio_target_show_chap_discovery_auth, nargs=0,
-		help="Show CHAP authentication information for iSCSI Discovery portal");
 	parser.add_option("--shownodetcq", action="callback", callback=lio_target_show_node_tcq, nargs=3,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN", help="Show iSCSI Initiator ACL TCQ Depth for LIO-Target Portal Group")
 	parser.add_option("--showtgptgp", action="callback", callback=lio_target_alua_show_tgptgp, nargs=3,
