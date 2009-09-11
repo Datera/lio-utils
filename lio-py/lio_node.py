@@ -1284,7 +1284,7 @@ def main():
 	parser.add_option("--setchapmutualauth", action="callback", callback=lio_target_set_chap_mutual_auth, nargs=5,
 		type="string", dest="TARGET_IQN TPGT INITIATOR_IQN USER_IN PASS_IN", help="Set CHAP mutual authentication information for iSCSI Initiator Node ACL");
         parser.add_option("--setchapdiscenforce", action="callback", callback=lio_target_set_enforce_discovery_auth, nargs=1,
-                type="string", dest="Enforce=1, NoEnforcement=0", help="Set CHAP authentication enforcement for iSCSI Discovery Sessions");
+                type="string", dest="1=Enforce Discovery Auth, 0=No Discovery Auth", help="Set CHAP authentication enforcement for iSCSI Discovery Sessions");
         parser.add_option("--setchapdiscauth", action="callback", callback=lio_target_set_chap_discovery_auth, nargs=2,
                 type="string", dest="USER PASS", help="Set CHAP authentication information for iSCSI Discovery Authentication")
         parser.add_option("--setchapdiscmutualauth", action="callback", callback=lio_target_set_chap_mutual_discovery_auth, nargs=2,
