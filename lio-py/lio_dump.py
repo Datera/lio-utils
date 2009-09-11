@@ -16,9 +16,33 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 
 	iqn_root = os.listdir(lio_root)
 
+	# This will load up iscsi_target_mod.ko
+	print "mkdir " + lio_root
+
+	print "#### iSCSI Discovery authentication information"
+	auth_dir = lio_root + "/discovery_auth"
+	if os.path.isdir(auth_dir) == True:
+		for auth in os.listdir(auth_dir):
+			if auth == "authenticate_target":
+				continue
+
+			auth_file = auth_dir + "/" + auth
+			p = os.open(auth_file, 0)
+			value = os.read(p, 256)
+			ret = value.isspace()
+			if ret:
+				os.close(p)
+				continue
+			print "echo -n " + value.rstrip() + " > " + auth_file
+			os.close(p)
+
+	iqn_root = os.listdir(lio_root)
+
 	# Loop through LIO-Target IQN list
 	for iqn in iqn_root:
 		if iqn == "lio_version":
+			continue
+		if iqn == "discovery_auth":
 			continue
 
 		# Loop through LIO-Target IQN+TPGT list
