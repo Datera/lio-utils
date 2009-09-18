@@ -20,8 +20,8 @@ ifeq ($(SNMP_FEATURE), 1)
 endif
 
 install: all
-	cd tcm-py ; python setup.py install ; sh install.sh
-	cd lio-py ; python setup.py install ; sh install.sh
+	cd tcm-py ; sh install.sh
+	cd lio-py ; sh install.sh
 	-if test -d tools; then make -C tools install; fi
 ifeq ($(SNMP_FEATURE), 1)
 	-if test -d mib-modules; then make -C mib-modules install; fi
