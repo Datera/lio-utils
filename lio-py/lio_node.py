@@ -179,7 +179,7 @@ def __lio_target_del_tpg(option, opt_str, value, parser, delete_tpg_md):
 	disable_op = "echo 0 > " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/enable"
 	ret = os.system(disable_op)
 	if ret:
-		lio_err("Unable to disable TPG : " + iqn + " TPGT: " + tpgt)
+		print "Unable to disable TPG: " + iqn + " TPGT: " + tpgt
 
 	np_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np")
 	for np in np_root:
