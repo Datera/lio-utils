@@ -84,7 +84,11 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 				# Dump ALUA Target Port Group
 				tg_pt_gp_file = lun_dir + "/alua_tg_pt_gp"
 				p = os.open(tg_pt_gp_file, 0)
-				value = os.read(p, 512)
+				try:
+					value = os.read(p, 512)
+				except:
+					os.close(p)
+					continue
 				os.close(p)
 				if value:
 					tg_pt_gp_tmp = value.split('\n')
