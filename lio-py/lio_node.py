@@ -53,7 +53,7 @@ def lio_alua_set_secondary_write_md(iqn, tpgt, lun):
 	if os.path.isfile(alua_write_md_file) == False:
 		return
 
-	p = open(alua_write_md_file, 'wU')
+	p = open(alua_write_md_file, 'w')
 	if not p:
 		lio_err("Unable to open: " + alua_write_md_file)
 
@@ -94,7 +94,7 @@ def lio_alua_process_secondary_md(option, opt_str, value, parser):
 		if re.search('alua_tg_pt_offline=', buf):
 			alua_tg_pt_offline = buf[19:]
 #			print "Extracted alua_tg_pt_offline: " + alua_tg_pt_offline
-			cfs = open(alua_sec_cfs_path + "/alua_tg_pt_offline", 'wU')
+			cfs = open(alua_sec_cfs_path + "/alua_tg_pt_offline", 'w')
 			if not cfs:
 				p.close()
 				lio_err("Unable to open " + alua_sec_cfs_path + "/alua_tg_pt_offline")
@@ -108,7 +108,7 @@ def lio_alua_process_secondary_md(option, opt_str, value, parser):
 		elif re.search('alua_tg_pt_status=', buf):
 			alua_tg_pt_status = buf[18:]
 #			print "Extracted alua_tg_pt_status: " + alua_tg_pt_status
-			cfs = open(alua_sec_cfs_path + "/alua_tg_pt_status", 'wU')
+			cfs = open(alua_sec_cfs_path + "/alua_tg_pt_status", 'w')
 			if not cfs:
 				p.close()
 				lio_err("Unable to open " + alua_sec_cfs_path + "/alua_tg_pt_status")
@@ -1047,7 +1047,7 @@ def lio_target_set_node_attr(option, opt_str, value, parser):
 	if os.path.isdir(attr_dir) == False:
 		lio_err("Unable to locate node attr_dir: " + attr_dir)
 
-	p = open(attr_dir + "/" + attr, 'wU')
+	p = open(attr_dir + "/" + attr, 'w')
 	if not p:
 		lio_err("Unable to open node attr: " + attr_dir + "/" + attr)
 
@@ -1115,7 +1115,7 @@ def lio_target_set_tpg_attr(option, opt_str, value, parser):
 	if os.path.isdir(attr_dir) == False:
 		lio_err("Unable to locate tpg attr_dir: " + attr_dir)
 
-	p = open(attr_dir + "/" + attr, 'wU')
+	p = open(attr_dir + "/" + attr, 'w')
 	if not p:
 		lio_err("Unable to open tpg attr: " + attr_dir + "/" + attr)
 
@@ -1160,7 +1160,7 @@ def lio_target_set_tpg_param(option, opt_str, value, parser):
 	if os.path.isdir(param_dir) == False:
 		lio_err("Unable to locate tpg param dir: " + param_dir)
 
-	p = open(param_dir + "/" + param, 'wU')
+	p = open(param_dir + "/" + param, 'w')
 	if not p:
 		lio_err("Unable to open tpg attr: " + param_dir + "/" + param)
 

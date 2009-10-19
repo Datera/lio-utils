@@ -369,7 +369,7 @@ def set_cfs_snap_pid(cfs_path):
 	pid = os.getpid()
 
 	snap_attr = cfs_path + "/snap/pid"
-	p = open(snap_attr, 'wU')
+	p = open(snap_attr, 'w')
 	if not p:
 		print "Unable to open snap_attr: " + snap_attr
 		return 1
@@ -384,7 +384,7 @@ def set_cfs_snap_pid(cfs_path):
 def set_cfs_snap_usage(cfs_path, usage):
 
 	snap_attr = cfs_path + "/snap/usage"
-	p = open(snap_attr, 'wU')
+	p = open(snap_attr, 'w')
 	if not p:
 		print "Unable to open snap_attr: " + snap_attr
 		return 1
@@ -431,7 +431,7 @@ def snap_lvremove(snap_path):
 def snap_set_cfs_attrib(cfs_path, attr, val):
 	
 	attr_file = cfs_path + "/snap/" + attr
-	p = open(attr_file, 'wU')
+	p = open(attr_file, 'w')
 	if not p:
 		print "Unable to open snap attr_file: " + attr_file
 		return 1

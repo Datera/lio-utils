@@ -109,7 +109,7 @@ def tcm_alua_delete_metadata_dir(unit_serial):
 def tcm_alua_set_write_metadata(alua_cfs_path):
 	alua_write_md_file = alua_cfs_path + "/alua_write_metadata"
 
-	p = open(alua_write_md_file, 'wU')
+	p = open(alua_write_md_file, 'w')
 	if not p:
 		tcm_err("Unable to open: " + alua_write_md_file)
 	
@@ -152,7 +152,7 @@ def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 		elif re.search('alua_access_state=', buf):
 			alua_access_state = buf[21:]
 #			print "Extracted alua_access_state: " + alua_access_state
-			cfs = open(alua_cfs_path + "/alua_access_state", 'wU')
+			cfs = open(alua_cfs_path + "/alua_access_state", 'w')
 			if not cfs:
 				tcm_err("Unable to open " + alua_cfs_path + "/alua_access_state")
 
@@ -165,7 +165,7 @@ def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 		elif re.search('alua_access_status=', buf):
 			alua_access_status = buf[22:]
 #			print "Extracted alua_access_status " + alua_access_status
-			cfs = open(alua_cfs_path + "/alua_access_status", 'wU')
+			cfs = open(alua_cfs_path + "/alua_access_status", 'w')
 			if not cfs:
 				tcm_err("Unable to open " + alua_cfs_path + "/alua_access_status")
 	
@@ -491,7 +491,7 @@ def tcm_process_aptpl_metadata(option, opt_str, value, parser):
 
 		out = out[:-1]
 
-		cfs = open(cfs_aptpl_file, 'wU')
+		cfs = open(cfs_aptpl_file, 'w')
 		if not cfs:
 			p.close()
 			tcm_err("Unable to open cfs_aptpl_file: " + cfs_aptpl_file)
@@ -799,7 +799,7 @@ def tcm_snapshot_attr_set(option, opt_str, value, parser):
 	if (os.path.isdir(cfs_dev_path) == False):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 	
-	p = open(cfs_dev_path + "/snap/" + attr, 'wU')
+	p = open(cfs_dev_path + "/snap/" + attr, 'w')
 	val = p.write(value)
 	if val:
 		p.close()
@@ -872,7 +872,7 @@ def tcm_snapshot_start(option, opt_str, value, parser):
 	print "Started tcm_snap daemon at pid: " + str(ret) + " for " + cfs_dev_path
 	
 	enabled_attr = cfs_dev_path + "/snap/enabled"
-	p = open(enabled_attr, 'wU')
+	p = open(enabled_attr, 'w')
 	if not p:
 		tcm_err("Unable to open enabled_attr: " + enabled_attr)
 
@@ -940,7 +940,7 @@ def tcm_snapshot_stop(option, opt_str, value, parser):
 		return err.errno == errno.EPERM
 
 	print "Successfully stopped tcm_snap daemon for " + cfs_dev_path
-	p = open(pid_attr, 'wU')
+	p = open(pid_attr, 'w')
 	if not p:
 		tcm_err("Unable to open pid_attr: " + pid_attr)
 
@@ -950,7 +950,7 @@ def tcm_snapshot_stop(option, opt_str, value, parser):
 	p.close()
 
 	enabled_attr = cfs_dev_path + "/snap/enabled"
-	p = open(enabled_attr, 'wU')
+	p = open(enabled_attr, 'w')
 	if not p:
 		tcm_err("Unable to open enabled_attr: " + enabled_attr)
 		
