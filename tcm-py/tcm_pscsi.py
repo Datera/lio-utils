@@ -51,11 +51,8 @@ def pscsi_createvirtdev(path, params):
 #	print "Calling pscsi_createvirtdev: params " + str(params)
 	pscsi_params = params[0]
 #	print pscsi_params
-	pscsi_udev_path = 0
 
 	# Exract HCTL from sysfs and set udev_path
-	# Also, call mkdir(2) for the PSCSI_HBA/DEV once the SCSI Host ID has
-	# been determined
 	if re.search('/dev/', pscsi_params):
 		udev_path = pscsi_params.rstrip()
 		if re.search('/dev/disk/', udev_path):
@@ -106,42 +103,20 @@ def pscsi_createvirtdev(path, params):
 		scsi_lun_id = scsi_hctl[3]
 		print "pSCSI: Referencing HCTL " + out[1].rstrip() + " for udev_path: " + udev_path
 
-		hba_path = tcm_root + "/pscsi_" + scsi_host_id + "/"
-		cfs_path = hba_path + path + "/"
-		mkdir_op = "mkdir -p " + cfs_path
-		ret = os.system(mkdir_op)
-		if ret:
-			print "pSCSI: Failed to create ConfigFS Storage Object: " + cfs_path
-			return -1
-		else:
-			print "pSCSI: Created cfs_path: " + cfs_path
-
 		set_udev_path_op = "echo -n " + udev_path + " > " + cfs_path + "udev_path"
 		ret = os.system(set_udev_path_op)
 		if ret:
 			print "pSCSI: Unable to set udev_path in " + cfs_path + " for: " + udev_path
-			rmdir_op = "rmdir " + cfs_path 
-			os.system(rmdir_op)
-			if len(os.listdir(hba_path)) == 1:
-				rmdir_op = "rmdir " + hba_path
-				os.system(rmdir_op)
 			return -1
 
-		pscsi_udev_path = 1
-		pscsi_params = "scsi_channel_id=" + scsi_channel_id + ",scsi_target_id=" + scsi_target_id + ",scsi_lun_id=" + scsi_lun_id.rstrip()
+		pscsi_params = "scsi_host_id=" + scsi_host_id + ",scsi_channel_id=" + scsi_channel_id + ",scsi_target_id=" + scsi_target_id + ",scsi_lun_id=" + scsi_lun_id.rstrip()
 
 		
-	control_opt = "echo " + pscsi_params + " > " + cfs_path + "control"
+	control_opt = "echo -n " + pscsi_params + " > " + cfs_path + "control"
 #	print "Calling control_opt " + control_opt
 	ret = os.system(control_opt)
 	if ret:
 		print "pSCSI: createvirtdev failed for control_opt with " + pscsi_params
-		if pscsi_udev_path:
-			rmdir_op = "rmdir " + cfs_path 
-			os.system(rmdir_op)
-			if len(os.listdir(hba_path)) == 1:
-				rmdir_op = "rmdir " + hba_path
-				os.system(rmdir_op)
 		return -1
 
 	enable_opt = "echo 1 > " +  cfs_path + "enable"	
@@ -149,26 +124,7 @@ def pscsi_createvirtdev(path, params):
 	ret = os.system(enable_opt)
 	if ret:
 		print "pSCSI: createvirtdev failed for enable_opt with " + pscsi_params
-		if pscsi_udev_path:
-			rmdir_op = "rmdir " + cfs_path
-			os.system(rmdir_op)
-			if len(os.listdir(hba_path)) == 1:
-				rmdir_op = "rmdir " + hba_path
-				os.system(rmdir_op)
 		return -1
-
-	if pscsi_udev_path:
-		info_op = "cat " + cfs_path + "info"
-                ret = os.system(info_op)
-                if ret:
-                        print "pSCSI: Unable to access TCM storage object"
-			if pscsi_udev_path:
-				rmdir_op = "rmdir " + cfs_path
-				os.system(rmdir_op)
-				if len(os.listdir(hba_path)) == 1:
-					rmdir_op = "rmdir " + hba_path
-					os.system(rmdir_op)
-			return -1
 
 	return
 
@@ -176,7 +132,16 @@ def pscsi_freevirtdev():
 	return
 
 def pscsi_get_params(path):
-	
+	# Reference by udev_path if available   
+	udev_path_file = path + "/udev_path"
+	p = os.open(udev_path_file, 0)
+	value = os.read(p, 1024)
+	if re.search('/dev/', value):
+		os.close(p)
+		return value.rstrip()
+
+	os.close(p)
+
 	info_file = path + "/info"
 	p = open(info_file, 'rU')
 	try:
@@ -198,7 +163,21 @@ def pscsi_get_params(path):
 	off += 5
 	lun_id_tmp = value[off:]
 	lun_id = lun_id_tmp.split(' ')
-	params = "scsi_channel_id=" + channel_id[0] + ",scsi_target_id=" + target_id[0] + ",scsi_lun_id=" + lun_id[0].rstrip()
+	params = ""
+	
+	try:
+		off = value.index('Host ID: ')
+	except ValueError:
+		params = ""
+	else:
+		off += 9
+		host_id_tmp = value[off:]
+		host_id = host_id_tmp.split(' ')
+		host_id = host_id[0].rstrip()
+		if host_id != "PHBA":
+			params += "scsi_host_id=" + host_id[0] + ","
+
+	params += "scsi_channel_id=" + channel_id[0] + ",scsi_target_id=" + target_id[0] + ",scsi_lun_id=" + lun_id[0].rstrip()
 
 	# scsi_channel_id=, scsi_target_id= and scsi_lun_id= reference for tcm_node --createdev
 	return params

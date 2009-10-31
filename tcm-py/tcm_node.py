@@ -228,7 +228,7 @@ def tcm_delhba(option, opt_str, value, parser):
 
 	dev_root = tcm_root + "/" + hba_name + "/"
 	for g in os.listdir(dev_root):
-		if g == "hba_info":
+		if g == "hba_info" or g == "hba_mode":
 			continue;
 
 		tmp_str = hba_name + "/"+ g
@@ -534,12 +534,7 @@ def tcm_create_pscsibyudev(option, opt_str, value, parser):
 	plugin_params = tmp_params.split(' ')
 
 	print " ConfigFS Device Alias: " + cfs_dev
-	ret = tcm_pscsi.pscsi_createvirtdev(cfs_dev, plugin_params)
-	if not ret:
-		print "Successfully created TCM/ConfigFS storage object: " + plugin_params[0]
-	else:
-		tcm_err("Unable to register TCM/ConfigFS storage object: " + plugin_params[0])
-
+	tcm_createvirtdev(option, opt_str, value, parser)
 	return
 
 def tcm_create_iblock(option, opt_str, value, parser):
@@ -638,7 +633,7 @@ def tcm_list_hbas(option, opt_str, value, parser):
 		os.close(p)
 
 		for dev in os.listdir(dev_root):
-			if dev == "hba_info":
+			if dev == "hba_info" or dev == "hba_mode":
 				continue
 			p = open(dev_root + "/" + dev + "/info", 'rU')
 			try:
@@ -1318,7 +1313,7 @@ def main():
 	parser.add_option("--scsi","--pscsi", action="callback", callback=tcm_create_pscsi, nargs=2,
 			type="string", dest="HBA/DEV <C:T:L>", help="Associate TCM/pSCSI object with Linux/SCSI device by bus location")
 	parser.add_option("--scsibyudev", "--pscsibyudev", action="callback", callback=tcm_create_pscsibyudev, nargs=2,
-			type="string", dest="DEV <UDEV_PATH>", help="Associate TCM/pSCSI object with Linux/SCSI device by UDEV Path")
+			type="string", dest="HBA/DEV <UDEV_PATH>", help="Associate TCM/pSCSI object with Linux/SCSI device by UDEV Path")
 	parser.add_option("--setaluadelay", action="callback", callback=tcm_set_alua_nonop_delay, nargs=3,
 			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <NON_OP_DELAY_IN_MSECS>", help="Set ALUA Target Port Group delay for Active/NonOptimized in milliseconds")
 	parser.add_option("--setaluapref", action="callback", callback=tcm_set_alua_tgpt_pref, nargs=2,
