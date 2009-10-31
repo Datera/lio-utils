@@ -80,6 +80,10 @@ def pscsi_createvirtdev(path, params):
 			print "pSCSI: Unable to locate scsi_device from udev_path: " + udev_path
 			return -1
 
+		# Convert scdX to sr0 for TYPE_ROM in /sys/block/
+		if re.search('scd', scsi_dev):
+			scsi_dev = scsi_dev.replace('scd', 'sr');
+
 		if not os.path.isdir("/sys/block/" + scsi_dev + "/device/"):
 			print "pSCSI: Unable to locate scsi_device from udev_path: " + udev_path
 			return -1
