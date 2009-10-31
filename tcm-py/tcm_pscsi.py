@@ -85,18 +85,19 @@ def pscsi_createvirtdev(path, params):
 			print "pSCSI: Unable to locate scsi_device from udev_path: " + udev_path
 			return -1
 
-		scsi_dev_sysfs = "/sys/block/" + scsi_dev + "/device/scsi_device"
-		udev_op = "/bin/ls -l " + scsi_dev_sysfs + "*"
+		scsi_dev_sysfs = "/sys/block/" + scsi_dev + "/device"
+		udev_op = "/bin/ls -l " + scsi_dev_sysfs 
 		p = sub.Popen(udev_op, shell=True, stdout=sub.PIPE).stdout
 		if not p:
 			print "pSCSI: Unable to locate scsi_device from udev_path: " + udev_path
 			return -1			
 
 		line = p.readline()
-		out = line.split('scsi_device/')
+		out = line.split('/')
 		p.close()
 
-		scsi_hctl = out[1].split(':')
+		scsi_hctl_tmp = out[len(out)-1]	
+		scsi_hctl = scsi_hctl_tmp.split(':')
 		scsi_host_id = scsi_hctl[0]
 		scsi_channel_id = scsi_hctl[1]
 		scsi_target_id = scsi_hctl[2]
