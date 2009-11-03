@@ -207,6 +207,10 @@ function load_tcm_mod() {
 }
 
 function shutdown_lio_mod () {
+	if [ ! -d /sys/kernel/config/target/iscsi/ ]; then
+		return 0
+	fi
+
 	echo -n $"Unloading LIO-Target/ConfigFS fabric: "
 	${LIO_NODE} --unload
         RETVAL=$?
