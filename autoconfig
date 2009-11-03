@@ -322,7 +322,7 @@ sub make_target_user_rpm
 {
     my $ostype = ostype($options->{root_dir});
     my $mandir = "/usr/share/man";
-    my $value = `python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"`;
+    my $value = `python ./get-py-modules-path.py`;
     my $py_inst_dir = $value = substr($value,0,length($value)-1); 
 
     LIO_VERSION();

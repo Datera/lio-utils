@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"`
+SITE_PACKAGES=`python ../get-py-modules-path.py`
 
 if [ -f /usr/sbin/tcm_node ]; then
 	rm /usr/sbin/tcm_node
