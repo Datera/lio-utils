@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Filename:  /etc/rc.d/init.d/target
+# Filename:  /etc/init.d/target
 # target:	Bring up/down target_core_mod and iscsi_target_mod v3.0
 #
 # Bring up/down iscsi target networking
@@ -12,8 +12,17 @@
 #########################################################################
 #
 
+# For SuSE, the following information is read by "insserv" program and the
+# start/stoplinks are installed at appropriate runlevels.
+# The network interface and logger has to be up for starting target service
+
 ### BEGIN INIT INFO
-# Provides: $target
+# Provides: target
+# Required-Start: $network $syslog
+# Required-Stop:  $network $syslog
+# Default-Start:  2 3 5
+# Default-Stop:   0 1 6
+# Description:    TCM/ConfigFS and LIO-Target
 ### END INIT INFO
 
 # Source function library.
