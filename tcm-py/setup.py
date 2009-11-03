@@ -12,6 +12,6 @@ setup (name='tcm',
       author_email='nab@linux-iscsi.org',
       url='http://linux-iscsi.org',
       license='GPL',
-      py_modules=['tcm_dump', 'tcm_fileio','tcm_iblock','tcm_node','tcm_pscsi','tcm_ramdisk','tcm_snap']
+      py_modules=['tcm_dump', 'tcm_fileio','tcm_iblock','tcm_node','tcm_pscsi','tcm_ramdisk','tcm_snap','tcm_loop']
 )
 

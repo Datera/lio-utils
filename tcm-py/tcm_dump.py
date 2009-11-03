@@ -55,7 +55,7 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 
 		dev_root = tcm_root + "/" + f + "/"
 		for g in os.listdir(dev_root):
-			if g == "hba_info":
+			if g == "hba_info" or g == "hba_mode":
 				continue;
 			
 			# Dump device aka storage object
@@ -111,6 +111,15 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 				# Note that this will handle read, parse and set any PR APTPL metadata
 				print "tcm_node --setunitserialwithmd " + f + "/" + g + " " + unit_serial.rstrip()
 				os.close(p)
+
+			# Dump device object alias
+			alias_file = dev_root + g + "/alias"
+			p = open(alias_file, 'r')
+			value = p.read(512)
+			value = value.rstrip()
+			p.close()
+			if value:
+				print "echo -n \"" + value + "\" > " + dev_root + g + "/alias"
 
 			# Dump ALUA Logical Unit Group
 			lu_gp_file = dev_root + g + "/alua_lu_gp"
