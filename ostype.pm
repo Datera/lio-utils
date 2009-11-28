@@ -81,10 +81,10 @@ sub ostype
 	   lc($txt) =~/suse/)
     {
 	my $release = $1;
-	my ($kernel) = glob("$root/lib/modules/*-{default,smp}");
+	my ($kernel) = glob("$root/lib/modules/*-{default,smp,desktop}");
 
 	$kernel = basename($kernel);
-	$kernel =~ s/-(default|smp)$//;
+	$kernel =~ s/-(default|smp|desktop)$//;
 
 	unless ($ENV{'KERNEL'} eq "")
 	{
