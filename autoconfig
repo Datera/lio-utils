@@ -387,13 +387,7 @@ sub make_target_user_rpm
     $iscsid->{preun} .= "	unlink /usr/sbin/lio_dump ;";
     $iscsid->{preun} .= "fi; ";
 
-    $iscsid->{python_obj} = { "$py_inst_dir/tcm_node.pyc" }, { "$py_inst_dir/tcm_node.pyo" },
-			    { "$py_inst_dir/tcm_pscsi.pyc" }, { "$py_inst_dir/tcm_pscsi.pyo" },
-		    	    { "$py_inst_dir/tcm_iblock.pyc" }, { "$py_inst_dir/tcm_iblock.pyo" },
-			    { "$py_inst_dir/tcm_fileio.pyc" }, { "$py_inst_dir/tcm_fileio.pyo" },
-			    { "$py_inst_dir/tcm_ramdisk.pyc" }, { "$py_inst_dir/tcm_ramdisk.pyo" },
-			    { "$py_inst_dir/tcm_dump.pyc" }, { "$py_inst_dir/tcm_dump.pyo" },
-			    { "$py_inst_dir/tcm_snap.pyc" }, { "$py_inst_dir/tcm_snap.pyo" };
+    $iscsid->{python_obj} = "$py_inst_dir/*.py*";
 
     if ($ostype->{DISTRO} eq "SUSE")
     {
@@ -754,12 +748,7 @@ sub make_rpm
 	}
     }
 
-#    foreach my $py_obj_file ( sort keys %{$rpm->{python_obj}} )
-#    {
-#	print "py_obj_file: $py_obj_file\n";
-#	print SPECFILE "$py_obj_file\n";
-#    }
-
+    print SPECFILE "$rpm->{python_obj}\n";
 
     close SPECFILE;
 
