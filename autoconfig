@@ -403,7 +403,7 @@ sub make_target_user_rpm
 #	$iscsid->{files} -> { "/sbin/target-ctl" } =
  #       { original => "ipyxd/scripts/target-ctl.wrapper", mode => 755};
 
-#	$iscsid->{post} .= "insserv target\n";			# no longer set up autostart
+	$iscsid->{post} .= "insserv target\n";			# no longer set up autostart
 	$iscsid->{preun} .= "insserv -r target\n";
 
     }
