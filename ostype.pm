@@ -81,17 +81,21 @@ sub ostype
 	   lc($txt) =~/suse/)
     {
 	my $release = $1;
-	my ($kernel) = glob("$root/lib/modules/*-{default,smp}");
+	my ($kernel) = glob("$root/lib/modules/*-{default,smp,desktop}");
 
 	$kernel = basename($kernel);
-	$kernel =~ s/-(default|smp)$//;
+	$kernel =~ s/-(default|smp|desktop)$//;
 
 	unless ($ENV{'KERNEL'} eq "")
 	{
 	    $kernel = $ENV{'KERNEL'};
 	}
 	
-	$rval->{SYSTEM}="SLES$release-$kernel";
+	if (lc($txt) =~/opensuse/) {
+		$rval->{SYSTEM}="OPENSUSE$release-$kernel";	
+	} else {
+		$rval->{SYSTEM}="SLES$release-$kernel";
+	}
 	$rval->{RPM_DIR}="/usr/src/packages";
 	$rval->{DISTRO}="SUSE";
 	$rval->{OSTYPE}="LINUX";
