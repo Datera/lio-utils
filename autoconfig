@@ -620,10 +620,16 @@ sub make_rpm
     $rpmbuild_minor_ver =~ s/^.*?\.([0-9]+).*/$1/;
 
     my $rpmbuild_legacy = 0;
-    # RHEL 5.x and SLES 11 use RPM version 4.4.2.3, for which we need to set $rpmbuild_legacy
-    # Fedora 11 and OpenSuse 11 use RPM version 4.7.1
+    # RHEL 5.x and SLES 11 both use RPM version 4.4.2.3.
+    # For RHEL/CentOS 5.x, we need to set $rpmbuild_legacy, but for SLES 11
+    # $rpmbuild_legacy currently needs to be disabled with version 4.4.2.3.
+    #
+    # Fedora 11 and OpenSuse 11 use RPM version 4.7.1, and will new the non legacy method
     if (($rpmbuild_major_ver <= 4) && ($rpmbuild_minor_ver <= 4)) {
-	$rpmbuild_legacy = 1;
+	if (!(lc($ostype->{SYSTEM}) =~ /sles11/)) {	
+		print "Setting rpmbuild_legacy=1 for $ostype->{SYSTEM}\n";
+		$rpmbuild_legacy = 1;	
+	}
     }
 
     my $buildroot = "";
