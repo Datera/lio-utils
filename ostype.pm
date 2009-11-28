@@ -91,7 +91,11 @@ sub ostype
 	    $kernel = $ENV{'KERNEL'};
 	}
 	
-	$rval->{SYSTEM}="SLES$release-$kernel";
+	if (lc($txt) =~/opensuse/) {
+		$rval->{SYSTEM}="OPENSUSE$release-$kernel";	
+	} else {
+		$rval->{SYSTEM}="SLES$release-$kernel";
+	}
 	$rval->{RPM_DIR}="/usr/src/packages";
 	$rval->{DISTRO}="SUSE";
 	$rval->{OSTYPE}="LINUX";
