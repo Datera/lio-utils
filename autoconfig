@@ -612,14 +612,28 @@ sub make_rpm
 	"Distribution: $ostype->{SYSTEM} with kernel $ostype->{RELEASE}\n".
 	"License: $rpm->{product_name}, GPL\n";
 
-    if ($ostype->{DISTRO} eq "SUSE")
-    {
-	print SPECFILE "Buildroot: ${build_dir}-root\n";
+    # Determine rpmbuild version for BUILDROOT usage in make_rpm()
+    my $rpmbuild_ver = `rpmbuild --version`;
+    my $rpmbuild_major_ver = $rpmbuild_ver;
+    $rpmbuild_major_ver =~ s/^.*?.([0-9]+).*/$1/;
+    my $rpmbuild_minor_ver = $rpmbuild_ver;
+    $rpmbuild_minor_ver =~ s/^.*?\.([0-9]+).*/$1/;
+
+    my $rpmbuild_legacy = 0;
+    # RHEL 5.x and SLES 11 use RPM version 4.4.2.3, for which we need to set $rpmbuild_legacy
+    # Fedora 11 and OpenSuse 11 use RPM version 4.7.1
+    if (($rpmbuild_major_ver <= 4) && ($rpmbuild_minor_ver <= 4)) {
+	$rpmbuild_legacy = 1;
     }
-    else
-    {
+
+    my $buildroot = "";
+    
+    if ($rpmbuild_legacy eq 1) {
 	print SPECFILE "Buildroot: ${build_dir}\n";
-    }
+    } else {
+	print SPECFILE "Buildroot: ${build_dir}-root\n";
+	$buildroot .= "${build_dir}-root";
+    } 
 
     print SPECFILE "Prereq: $rpm->{prereqs}\n" unless ($rpm->{prereqs} eq "");
 
@@ -637,15 +651,10 @@ sub make_rpm
 	"%setup -q\n".
 	"%build\n";
 
-    if ($ostype->{DISTRO} eq "SUSE")
-    {
+    if ($rpmbuild_legacy ne 1) {
 	print SPECFILE 
 	    "%install\n".
 	    "cp -ra ${build_dir}/. ${build_dir}-root/.\n";
-    }
-    else
-    {
-        print SPECFILE "%install\n";
     }
 
     print SPECFILE "%files\n";
@@ -760,7 +769,12 @@ sub make_rpm
 		system("mv $ostype->{RPM_DIR}/SOURCES/$rpm->{name}.tar.bz2 $ostype->{RPM_DIR}/RPMS");
 	}
     } else {
-    	die "RPM build failure: rpmbuild --target $arch -bb -vv $specfile" if (system("rpmbuild --target $arch -bb -vv $specfile")!=0);
+	my $rpmbuild_op = "rpmbuild --target $arch -bb -vv $specfile";
+	if ($rpmbuild_legacy ne 1) {
+		$rpmbuild_op .= " --buildroot $buildroot";
+	}
+
+	die "RPM build failure: $rpmbuild_op" if (system($rpmbuild_op)!=0);
     }
 }
 
