@@ -21,6 +21,11 @@ if [ ! -h /usr/sbin/tcm_snap ]; then
 	ln -s $INSTALL_PATH/tcm_snap.py /usr/sbin/tcm_snap;
 fi
 
+if [ ! -h /usr/sbin/tcm_loop ]; then
+	chmod a+x $INSTALL_PATH/tcm_loop.py;
+	ln -s $INSTALL_PATH/tcm_loop.py /usr/sbin/tcm_loop;
+fi
+
 if [ ! -h /usr/sbin/tcm_dump ]; then
 	chmod a+x $INSTALL_PATH/tcm_dump.py;
 	ln -s $INSTALL_PATH/tcm_dump.py /usr/sbin/tcm_dump;

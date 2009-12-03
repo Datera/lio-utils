@@ -18,6 +18,10 @@ if [ -h /usr/sbin/tcm_snap ]; then
         unlink /usr/sbin/tcm_snap;
 fi
 
+if [ -h /usr/sbin/tcm_loop ]; then
+	unlink /usr/sbin/tcm_loop;
+fi
+
 if [ -h /usr/sbin/tcm_dump ]; then
         unlink /usr/sbin/tcm_dump;
 fi
