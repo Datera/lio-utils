@@ -1,0 +1,14 @@
+lio-utils for Debian
+-----------------
+
+The Debian lio-utils package provides
+
+*) tcm-py and lio-py CLI modules for with /usr/sbin symlinks for tcm_node, tcm_dump, tcm_snap, lio_node, lio_dump 
+
+*) SCSI and iSCSI net-snmp dlmod objects and txt MIBs
+
+*) iscsi-name binary + script setup for /etc/init.d/target
+
+The lio-utils .deb package can be built with 'dpkg-buildpackage -rfakeroot'
+
+ -- Nicholas A. Bellinger (nab) <nab@linux-iscsi.org>  Wed, 2, Dec 2009 22:22:38 -0800.

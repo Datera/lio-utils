@@ -1,0 +1,46 @@
+#!/bin/sh
+
+INSTALL_PATH=`python -c '
+from distutils.sysconfig import get_python_lib,re;
+
+str = get_python_lib()
+
+# Fix up get_python_lib() path for Python v2.6 on Ubuntu 9.10 and SLES 11
+if re.search("python2.6", str):
+       print str.replace("/usr","/usr/local")
+else:
+       print str'
+`
+if [ ! -h /usr/sbin/tcm_node ]; then
+	chmod a+x $INSTALL_PATH/tcm_node.py;
+	ln -s $INSTALL_PATH/tcm_node.py /usr/sbin/tcm_node;
+fi
+
+if [ ! -h /usr/sbin/tcm_snap ]; then
+	chmod a+x $INSTALL_PATH/tcm_snap.py;
+	ln -s $INSTALL_PATH/tcm_snap.py /usr/sbin/tcm_snap;
+fi
+
+if [ ! -h /usr/sbin/tcm_dump ]; then
+	chmod a+x $INSTALL_PATH/tcm_dump.py;
+	ln -s $INSTALL_PATH/tcm_dump.py /usr/sbin/tcm_dump;
+fi
+
+if [ ! -h /usr/sbin/lio_node ]; then
+	chmod a+x $INSTALL_PATH/lio_node.py;
+	ln -s $INSTALL_PATH/lio_node.py /usr/sbin/lio_node;
+fi
+
+if [ ! -h /usr/sbin/lio_dump ]; then
+	chmod a+x $INSTALL_PATH/lio_dump.py;
+	ln -s $INSTALL_PATH/lio_dump.py /usr/sbin/lio_dump;
+fi
+
+if [ -x "/etc/init.d/target" ]; then
+        update-rc.d target defaults >/dev/null
+        if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+                invoke-rc.d target start || exit $?
+        else
+                /etc/init.d/target start || exit $?
+        fi
+fi

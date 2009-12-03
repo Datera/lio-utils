@@ -1,0 +1,5 @@
+lio-utils (3.1) unstable; urgency=low
+
+   * First debian packaged release
+
+ -- Nicholas A. Bellinger (nab) <nab@linux-iscsi.org>  Wed,  2 Dec 2009 22:22:38 -0800

@@ -1,0 +1,31 @@
+#!/bin/sh
+
+if [ -x "/etc/init.d/target" ]; then
+        if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+                invoke-rc.d target stop || exit $?
+        else
+                /etc/init.d/target stop || exit $?
+        fi
+fi
+
+update-rc.d -f target remove
+
+if [ -h /usr/sbin/tcm_node ]; then
+        unlink /usr/sbin/tcm_node;
+fi
+
+if [ -h /usr/sbin/tcm_snap ]; then
+        unlink /usr/sbin/tcm_snap;
+fi
+
+if [ -h /usr/sbin/tcm_dump ]; then
+        unlink /usr/sbin/tcm_dump;
+fi
+
+if [ -h /usr/sbin/lio_node ]; then
+        unlink /usr/sbin/lio_node;
+fi
+
+if [ -h /usr/sbin/lio_dump ]; then
+        unlink /usr/sbin/lio_dump;
+fi
