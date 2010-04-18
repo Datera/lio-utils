@@ -57,7 +57,21 @@ def tcm_loop_create_nexus(option, opt_str, value, parser):
 	sas_target_tpgt = str(value)
 	sas_initiator_address = tcm_generate_naa_sas_address();
 
-	create_op = "mkdir -p " + tcm_loop_root + sas_target_address + "/tpgt_" + sas_target_tpgt + "/nexus/" + sas_initiator_address
+	tpgt_dir = tcm_loop_root + sas_target_address + "/tpgt_" + sas_target_tpgt
+	create_op = "mkdir -p " + tpgt_dir
+	ret = os.system(create_op)
+	if ret:
+		print "Unable to create virtual Target Port: " + create_op
+		sys.exit(1)
+
+	# In TCM_Loop 4.x code, there is an nexus configfs attribute instead of
+	# nexus configfs group
+	nexus_dir = tpgt_dir + "/nexus"
+	if os.path.isfile(nexus_dir):
+		create_op = "echo " + sas_initiator_address + " > " + nexus_dir	
+	else:
+		create_op = "mkdir -p " + nexus_dir + "/" + sas_initiator_address
+
 	ret = os.system(create_op)
 	if ret:
 		print "Unable to create virtual SAS I_T Nexus: " + create_op
@@ -74,7 +88,19 @@ def tcm_loop_delete_nexus(option, opt_str, value, parser):
 	sas_target_tpgt = str(value[1])
 	sas_initiator_address = "";
 
-	nexus_dir = tcm_loop_root + sas_target_address + "/tpgt_" + sas_target_tpgt + "/nexus/"
+	nexus_dir = tcm_loop_root + sas_target_address + "/tpgt_" + sas_target_tpgt + "/nexus"
+
+	if os.path.isfile(nexus_dir):
+		delete_op = "echo NULL > " + nexus_dir
+		
+		ret = os.system(delete_op)
+		if ret:
+			print "Unable to delete virtual SCSI I_T Nexus between TCM and Linux/SCSI HBA"
+			sys.exit(1)
+		
+		print "Successfully deleted virtual SCSI I_T Nexus between TCM and Linux/SCSI HBA"
+		return
+
 	for nexus in os.listdir(nexus_dir):
 		delete_op = "rmdir " + nexus_dir + "/" + nexus
 
