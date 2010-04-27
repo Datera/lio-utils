@@ -149,8 +149,22 @@ def tcm_loop_dellun(option, opt_str, value, parser):
 	port_link = ""
 
 	lun_dir = tcm_loop_root + sas_target_address + "/tpgt_" + sas_target_tpgt + "/lun/lun_" + sas_target_lun
+	if not os.path.isdir(lun_dir):
+		print "TCM_Loop lun_dir: " + lun_dir + " does not exist"
+		sys.exit(1)
+
+	# Locate the port symlink, skipping over the per TCM port alua_* attributes
 	for port in os.listdir(lun_dir):
-		port_link = lun_dir + "/" + port
+		port_link_tmp = lun_dir + "/" + port
+		if not os.path.islink(port_link_tmp):
+			continue
+
+		port_link = port_link_tmp
+		break
+
+	if port_link == "":
+		print "Active TCM_Loop port link does not exist!"
+		sys.exit(1)
 
 	unlink_op = "unlink " + port_link
 	ret = os.system(unlink_op)
