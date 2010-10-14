@@ -39,13 +39,16 @@ def iblock_createvirtdev(path, params):
 		print "IBLOCK: Unable to set udev_path in " + cfs_path + " for: " + udev_path
 		return -1
 
-	# Failure here will be handled in tcm_createvirtdev() by checking
-	# /sys/kernel/config/target/core/$HBA/$DEV/info.  A failure case here will return
-	# -ENODEV
-	exec_op = "exec 3<>" + udev_path + "; echo 3 > " + cfs_path + "fd" + "; exec 3>&-"
-	ret = os.system(exec_op)
+	control_opt = "echo -n udev_path=" + udev_path + " > " + cfs_path + "control"
+	ret = os.system(control_opt)
 	if ret:
-		print "IBLOCK: Unable to access file descriptor for udev_path access: " + udev_path
+		print "IBLOCK: createvirtdev failed for control_opt with " + control_opt
+		return -1
+
+	enable_opt = "echo 1 > " +  cfs_path + "enable"
+	ret = os.system(enable_opt)
+	if ret:
+		print "IBLOCK: createvirtdev failed for enable_opt with " + enable_opt
 		return -1
 
 	return
