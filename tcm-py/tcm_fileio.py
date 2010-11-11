@@ -33,7 +33,7 @@ def fd_createvirtdev(path, params):
 			print "pSCSI: Unable to set udev_path in " + cfs_path + " for: " + udev_path
 			return -1
 
-	control_opt = "echo " + params[0] + " > " + cfs_path + "control"
+	control_opt = "echo -n " + params[0] + " > " + cfs_path + "control"
 #	print "control_opt: " + control_opt
 	ret = os.system(control_opt)
 	if ret:
