@@ -355,6 +355,9 @@ def __lio_target_del_port(option, opt_str, value, parser):
 		if port == "alua_tg_pt_write_md":
 			continue
 
+		if not os.path.islink(lun_dir + "/" + port):
+			continue
+
 		unlink_op = "unlink " + lun_dir + "/" + port
 #		print "del_portunlink_op: " + unlink_op
 		ret = os.system(unlink_op)
@@ -542,6 +545,9 @@ def lio_target_del_lunacl(option, opt_str, value, parser):
 	for lun_acl_link in os.listdir(lun_link_dir):
 		if lun_acl_link == "write_protect":
 			continue
+
+		if not os.path.islink(lun_link_dir + "/" + lun_acl_link):
+			continue;
 
 		unlink_op = "unlink " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/" + lun_acl_link
 #		print "unlink_op: " + unlink_op

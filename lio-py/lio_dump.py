@@ -76,6 +76,9 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 					if port == "alua_tg_pt_write_md":
 						continue
 					
+					if not os.path.islink(lun_dir + "/" + port):
+						continue
+
 					port_link = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun/lun_" + lun + "/" + port
 					sourcelink = os.readlink(port_link)
 					sourcelink2 = os.path.join(os.path.dirname(port_link), sourcelink)
@@ -180,6 +183,9 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 							value = os.read(p, 4)
 							print "echo " + value.rstrip() + " > " + lun_link_dir + "/write_protect"
 							os.close(p)
+							continue
+
+						if not os.path.islink(lun_link_dir + "/" + lun_acl_link):
 							continue
 
 						sourcelink = os.readlink(lun_link_dir + "/" + lun_acl_link)
