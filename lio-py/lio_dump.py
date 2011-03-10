@@ -48,6 +48,9 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 		# Loop through LIO-Target IQN+TPGT list
 		tpg_root = os.listdir(lio_root + "/" + iqn);
 		for tpgt_tmp in tpg_root:
+			if tpgt_tmp == "fabric_statistics":
+				continue
+
 			tpgt_tmp2 = tpgt_tmp.split('_')
 			tpgt = tpgt_tmp2[1]
 

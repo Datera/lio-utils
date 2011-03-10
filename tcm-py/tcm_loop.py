@@ -192,6 +192,8 @@ def tcm_loop_unload(option, opt_str, value, parser):
 
 		tpgt_dir = tcm_loop_root + sas_target_naa + "/"
 		for sas_target_tpgt in os.listdir(tpgt_dir):
+			if sas_target_tpgt == "fabric_statistics":
+				continue
 
 			print "sas_target_tpgt: " + sas_target_tpgt
 

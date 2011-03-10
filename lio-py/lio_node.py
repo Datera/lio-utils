@@ -134,6 +134,9 @@ def __lio_target_del_iqn(option, opt_str, value, parser, delete_tpg_md):
 # Loop through LIO-Target IQN+TPGT list
 	tpg_root = os.listdir(lio_root + "/" + iqn); 
 	for tpgt_tmp in tpg_root:
+		if tpgt_tmp == "fabric_statistics":
+			continue
+
 		tpgt_tmp2 = tpgt_tmp.split('_')
 		tpgt = tpgt_tmp2[1]
 
@@ -1197,6 +1200,9 @@ def lio_target_unload(option, opt_str, value, parser):
 		# Loop through LIO-Target IQN+TPGT list
 		tpg_root = os.listdir(lio_root + "/" + iqn);
 		for tpgt_tmp in tpg_root:
+			if tpgt_tmp == "fabric_statistics": 
+				continue
+
 			tpgt_tmp2 = tpgt_tmp.split('_')
 			tpgt = tpgt_tmp2[1]
 
