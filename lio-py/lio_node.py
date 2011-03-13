@@ -887,6 +887,9 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 
 		tpg_root = lio_root + "/" + iqn
 		for tpg in os.listdir(tpg_root):
+			if tpg == "fabric_statistics":
+				continue
+
 			p = os.open(tpg_root + "/" + tpg + "/param/TargetAlias", 0)
 			value = os.read(p, 256)
 			print "        \-------> " + tpg + "  TargetAlias: " + value.rstrip()
@@ -919,6 +922,8 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 					if port == "alua_tg_pt_status":
 						continue
 					if port == "alua_tg_pt_write_md":
+						continue
+					if port == "statistics":
 						continue
 					
 					port_link = port_dir + "/" + port
