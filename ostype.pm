@@ -125,6 +125,16 @@ sub ostype
 	$rval->{KERNEL_SOURCE_DIR}="/lib/modules/$rval->{RELEASE}/source";
 	$rval->{KERNEL_INCLUDE_DIR}="$rval->{KERNEL_SOURCE_DIR}/include";
     }
+    elsif (lc($txt) =~/scientific.*linux.*release\s+(\d+)\.(\d+)\s+\((\w+)/)
+    {
+	$rval->{SYSTEM}="SL-R$1.$2-\u$3";
+	$rval->{RPM_DIR}="/root/rpmbuild";
+	$rval->{DISTRO}="SL";
+	$rval->{OSTYPE}="LINUX";
+	$rval->{KERNEL_DIR}="/lib/modules/$rval->{RELEASE}/build";
+	$rval->{KERNEL_SOURCE_DIR}="/lib/modules/$rval->{RELEASE}/source";
+	$rval->{KERNEL_INCLUDE_DIR}="$rval->{KERNEL_SOURCE_DIR}/include";
+    }
     elsif (lc($txt) =~/fedora.*(?:core)?.*release\s+(\w+)\s+\((\w+)/)
     {
 	$rval->{SYSTEM}="FedoraCore-R$1-\u$2";
