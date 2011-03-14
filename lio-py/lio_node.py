@@ -927,6 +927,9 @@ def lio_target_list_endpoints(option, opt_str, value, parser):
 						continue
 					
 					port_link = port_dir + "/" + port
+					if not os.path.islink(port_link):
+						continue
+
 					sourcelink = os.readlink(port_link)
 					# Skip over ../../../../../ in sourcelink"		
 					print "                 \-------> " + lun + "/" + port + " -> " + sourcelink[18:]
@@ -965,6 +968,11 @@ def lio_target_list_lunacls(option, opt_str, value, parser):
 			lun_link_dir = lun_root_dir + "/" + lun
 			for lun_link in os.listdir(lun_link_dir):
 				if lun_link == "write_protect":
+					continue
+				if lun_link == "statistics":
+					continue
+
+				if not os.path.islink(lun_link_dir + "/" + lun_link):
 					continue
 				
 				sourcelink = os.readlink(lun_link_dir + "/" + lun_link)
