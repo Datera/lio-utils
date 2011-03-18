@@ -1265,103 +1265,147 @@ def tcm_version(option, opt_str, value, parser):
 	os.system("cat /sys/kernel/config/target/version")
 	return
 
+cmdline_options = ( \
+    dict(opt_str="--addlungp", callback=tcm_add_alua_lugp, nargs=1,
+         dest="lu_gp_name", help="Add ALUA Logical Unit Group"),
+    dict(opt_str=("--addtgptgp","--addaluatpg"),
+         callback=tcm_add_alua_tgptgp, nargs=2,
+         dest="HBA/DEV <TG_PT_GP_NAME>",
+         help="Add ALUA Target Port Group to Storage Object"),
+    dict(opt_str=("--addtgptgpwithmd","--addaluatpgwithmd"), action="callback",
+         callback=tcm_add_alua_tgptgp_with_md, nargs=3,
+         dest="HBA/DEV <TG_PT_GP_NAME> <TG_PT_GP_ID>",
+         help="Add ALUA Target Port Group to Storage Object with ID and process ALUA metadata"),
+    dict(opt_str=("--block","--iblock"), callback=tcm_create_iblock, nargs=2,
+         dest="HBA/DEV <UDEV_PATH>",
+         help="Associate TCM/IBLOCK object with Linux/BLOCK device"),
+    dict(opt_str="--clearaluapref", callback=tcm_clear_alua_tgpt_pref,
+         nargs=2, dest="HBA/DEV <TG_PT_GP_NAME>",
+         help="Clear ALUA Target Port Group Preferred Bit"),
+    dict(opt_str="--delhba", callback=tcm_delhba, nargs=1,
+         dest="HBA", help="Delete TCM Host Bus Adapter (HBA)"),
+    dict(opt_str="--dellungp", callback=tcm_del_alua_lugp, nargs=1,
+         dest="lu_gp_name", help="Delete ALUA Logical Unit Group"),
+    dict(opt_str=("--deltgptgp","--delaluatpg"), callback=tcm_del_alua_tgptgp, nargs=2,
+         dest="HBA/DEV TG_PT_GP_NAME",
+         help="Delete ALUA Target Port Group from Storage Object"),
+    dict(opt_str="--createdev", callback=tcm_createvirtdev, nargs=2,
+         dest="HBA/DEV <SUBSYSTEM_PARAMS>",
+         help="Create TCM Storage Object using subsystem dependent parameters,"
+         " and generate new T10 Unit Serial for IBLOCK,FILEIO,RAMDISK"),
+    dict(opt_str="--establishdev", callback=tcm_establishvirtdev, nargs=2,
+         dest="HBA/DEV <SUBSYSTEM_PARAMS>",
+         help="Create TCM Storage Object using subsystem dependent parameters, do"
+         "not generate new T10 Unit Serial"),
+    dict(opt_str="--fileio", callback=tcm_create_fileio, nargs=3,
+         dest="HBA/DEV <FILE> <SIZE_IN_BYTES>",
+         help="Associate TCM/FILEIO object with Linux/VFS file or underlying"
+         " device for buffered FILEIO"),
+    dict(opt_str="--freedev", callback=tcm_freevirtdev, nargs=1,
+         dest="HBA/DEV", help="Free TCM Storage Object"),
+    dict(opt_str="--listdevattr", callback=tcm_list_dev_attribs, nargs=1,
+         dest="HBA/DEV", help="List TCM storage object device attributes"),
+    dict(opt_str="--listhbas", callback=tcm_list_hbas, nargs=0,
+         help="List TCM Host Bus Adapters (HBAs)"),
+    dict(opt_str="--listlugps", callback=tcm_list_alua_lugps, nargs=0,
+         help="List ALUA Logical Unit Groups"),
+    dict(opt_str=("--listtgptgp","--listaluatpg"), callback=tcm_list_alua_tgptgp, nargs=2,
+         dest="HBA/DEV <TG_PT_GP_NAME>",
+         help="List specific ALUA Target Port Group for Storage Object"),
+    dict(opt_str=("--listtgptgps","--listaluatpgs"), callback=tcm_list_alua_tgptgps, nargs=1,
+         dest="HBA/DEV", help="List all ALUA Target Port Groups for Storage Object"),
+    dict(opt_str="--lvsnapattrset", callback=tcm_snapshot_attr_set, nargs=2,
+         dest="HBA/DEV ATTR=VALUE",
+         help="Set LV snapshot configfs attributes for TCM/IBLOCK storage object"),
+    dict(opt_str="--lvsnapattrshow", callback=tcm_snapshot_attr_show, nargs=1,
+         dest="HBA/DEV",
+         help="Show LV snapshot configfs attributes for TCM/IBLOCK storage object"),
+    dict(opt_str="--lvsnapinit", callback=tcm_snapshot_init, nargs=4,
+         dest="HBA/DEV MAX_SNAPSHOTS SNAP_SIZE_STR SNAP_INTERVAL_STR",
+         help="Initialize snapshot with default attributes"),
+    dict(opt_str="--lvsnapstart", callback=tcm_snapshot_start, nargs=1,
+         dest="HBA/DEV", help="Enable snapshot daemon for TCM/IBLOCK LVM storage object"),
+    dict(opt_str="--lvsnapstat", callback=tcm_snapshot_status, nargs=1,
+         dest="HBA/DEV", help="Display LV snapshot status for TCM/IBLOCK LVM storage object"),
+    dict(opt_str="--lvsnapstop", callback=tcm_snapshot_stop, nargs=1,
+         dest="HBA/DEV", help="Disable snapshot daemon for TCM/IBLOCK LVM storage object"),
+    dict(opt_str="--pr", callback=tcm_show_persistent_reserve_info, nargs=1,
+         dest="HBA/DEV", help="Show Persistent Reservation info"),
+    dict(opt_str="--praptpl", callback=tcm_process_aptpl_metadata, nargs=1,
+         dest="HBA/DEV", help="Process PR APTPL metadata from file"),
+    dict(opt_str="--prshowmd", callback=tcm_show_aptpl_metadata, nargs=1,
+         dest="HBA/DEV", help="Show APTPL metadata file"),
+    dict(opt_str="--ramdisk", callback=tcm_create_ramdisk, nargs=2,
+         dest="HBA/DEV <PAGES>", help="Create and associate TCM/RAMDISK object"),
+    dict(opt_str=("--scsi","--pscsi"), callback=tcm_create_pscsi, nargs=2,
+         dest="HBA/DEV <C:T:L>",
+         help="Associate TCM/pSCSI object with Linux/SCSI device by bus location"),
+    dict(opt_str=("--scsibyudev", "--pscsibyudev"), callback=tcm_create_pscsibyudev, nargs=2,
+         dest="HBA/DEV <UDEV_PATH>",
+         help="Associate TCM/pSCSI object with Linux/SCSI device by UDEV Path"),
+    dict(opt_str="--setaluadelay", callback=tcm_set_alua_nonop_delay, nargs=3,
+         dest="HBA/DEV <TG_PT_GP_NAME> <NON_OP_DELAY_IN_MSECS>",
+         help="Set ALUA Target Port Group delay for Active/NonOptimized in milliseconds"),
+    dict(opt_str="--setaluapref", callback=tcm_set_alua_tgpt_pref, nargs=2,
+         dest="HBA/DEV <TG_PT_GP_NAME>", help="Set ALUA Target Port Group Preferred Bit"),
+    dict(opt_str="--setaluastate", callback=tcm_set_alua_state, nargs=3,
+         dest="HBA/DEV <TG_PT_GP_NAME> <ALUA_ACCESS_STATE>",
+         help="Set ALUA access state for TG_PT_GP_NAME on Storage Object.  The value access"
+         " states are \"o\" = active/optimized, \"a\" = active/nonoptimized, \"s\" = standby,"
+         " \"u\" = unavailable"),
+    dict(opt_str="--setaluatransdelay", callback=tcm_set_alua_trans_delay, nargs=3,
+         dest="HBA/DEV <TG_PT_GP_NAME> <TRANS_DELAY_IN_MSECS>",
+         help="Set ALUA Target Port Group Transition delay"),
+    dict(opt_str="--setaluatype", callback=tcm_set_alua_type, nargs=3,
+         dest="HBA/DEV <TG_PT_GP_NAME> <ALUA_ACCESS_TYPE>",
+         help="Set ALUA access type for TG_PT_GP_NAME on Storage Object.  The value type"
+         " states are \"both\" = implict/explict, \"explict\", \"implict\", or \"none\""),
+    dict(opt_str="--setdevattr", callback=tcm_set_dev_attrib, nargs=3,
+         dest="HBA/DEV <ATTRIB> <VALUE>",
+         help="Set new value for TCM storage object device attribute"),
+    dict(opt_str="--setlugp", callback=tcm_set_alua_lugp, nargs=2,
+         dest="HBA/DEV LU_GP_NAME", help="Set ALUA Logical Unit Group"),
+    dict(opt_str="--setudevpath", callback=tcm_set_udev_path, nargs=2,
+         dest="HBA/DEV <udev_path>",
+         help="Set UDEV Path Information, only used when --createdev did not contain"
+         " <udev_path> as parameter"),
+    dict(opt_str="--setunitserial", callback=tcm_set_wwn_unit_serial, nargs=2,
+         dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information"),
+    dict(opt_str="--setunitserialwithmd", callback=tcm_set_wwn_unit_serial_with_md, nargs=2,
+         dest="HBA/DEV <unit_serial>",
+         help="Set T10 EVPD Unit Serial Information and process PR APTPL metadata"),
+    dict(opt_str="--udevpath", callback=tcm_show_udev_path, nargs=1,
+         dest="HBA/DEV", help="Show UDEV Path Information for TCM storage object"),
+    dict(opt_str="--unload", callback=tcm_unload, nargs=0,
+         help="Unload target_core_mod"),
+    dict(opt_str="--version", callback=tcm_version, nargs=0,
+         help="Display target_core_mod version information"),
+    dict(opt_str="--wwn", callback=tcm_show_wwn_info, nargs=1,
+         dest="HBA/DEV", help="Show WWN info"),
+)
+
 def main():
 
-	parser = OptionParser()
-	parser.add_option("--addlungp", action="callback", callback=tcm_add_alua_lugp, nargs=1,
-			type="string", dest="lu_gp_name", help="Add ALUA Logical Unit Group")
-	parser.add_option("--addtgptgp","--addaluatpg", action="callback", callback=tcm_add_alua_tgptgp, nargs=2,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="Add ALUA Target Port Group to Storage Object")
-	parser.add_option("--addtgptgpwithmd","--addaluatpgwithmd", action="callback", callback=tcm_add_alua_tgptgp_with_md, nargs=3,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <TG_PT_GP_ID>", help="Add ALUA Target Port Group to Storage Object with ID and process ALUA metadata")
-	parser.add_option("--block","--iblock", action="callback", callback=tcm_create_iblock, nargs=2,
-			type="string", dest="HBA/DEV <UDEV_PATH>", help="Associate TCM/IBLOCK object with Linux/BLOCK device")
-	parser.add_option("--clearaluapref", action="callback", callback=tcm_clear_alua_tgpt_pref, nargs=2,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="Clear ALUA Target Port Group Preferred Bit")
-	parser.add_option("--delhba", action="callback", callback=tcm_delhba, nargs=1,
-			type="string", dest="HBA", help="Delete TCM Host Bus Adapter (HBA)")
-	parser.add_option("--dellungp", action="callback", callback=tcm_del_alua_lugp, nargs=1,
-			type="string", dest="lu_gp_name", help="Delete ALUA Logical Unit Group")
-	parser.add_option("--deltgptgp","--delaluatpg", action="callback", callback=tcm_del_alua_tgptgp, nargs=2,
-			type="string", dest="HBA/DEV TG_PT_GP_NAME", help="Delete ALUA Target Port Group from Storage Object")
-	parser.add_option("--createdev", action="callback", callback=tcm_createvirtdev, nargs=2,
-			type="string", dest="HBA/DEV <SUBSYSTEM_PARAMS>", help="Create TCM Storage Object using subsystem dependent parameters, and generate new T10 Unit Serial for IBLOCK,FILEIO,RAMDISK")
-	parser.add_option("--establishdev", action="callback", callback=tcm_establishvirtdev, nargs=2,
-			type="string", dest="HBA/DEV <SUBSYSTEM_PARAMS>", help="Create TCM Storage Object using subsystem dependent parameters, do not generate new T10 Unit Serial")
-	parser.add_option("--fileio", action="callback", callback=tcm_create_fileio, nargs=3,
-			type="string", dest="HBA/DEV <FILE> <SIZE_IN_BYTES>", help="Associate TCM/FILEIO object with Linux/VFS file or underlying device for buffered FILEIO")
-	parser.add_option("--freedev", action="callback", callback=tcm_freevirtdev, nargs=1,
-			type="string", dest="HBA/DEV", help="Free TCM Storage Object")
-	parser.add_option("--listdevattr", action="callback", callback=tcm_list_dev_attribs, nargs=1,
-			type="string", dest="HBA/DEV", help="List TCM storage object device attributes")
-	parser.add_option("--listhbas", action="callback", callback=tcm_list_hbas, nargs=0,
-			help="List TCM Host Bus Adapters (HBAs)")
-        parser.add_option("--listlugps", action="callback", callback=tcm_list_alua_lugps, nargs=0,
-                        help="List ALUA Logical Unit Groups")
-	parser.add_option("--listtgptgp","--listaluatpg", action="callback", callback=tcm_list_alua_tgptgp, nargs=2,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="List specific ALUA Target Port Group for Storage Object")
-        parser.add_option("--listtgptgps","--listaluatpgs", action="callback", callback=tcm_list_alua_tgptgps, nargs=1,
-                        type="string", dest="HBA/DEV", help="List all ALUA Target Port Groups for Storage Object");
-	parser.add_option("--lvsnapattrset", action="callback", callback=tcm_snapshot_attr_set, nargs=2,
-			type="string", dest="HBA/DEV ATTR=VALUE", help="Set LV snapshot configfs attributes for TCM/IBLOCK storage object");
-	parser.add_option("--lvsnapattrshow", action="callback", callback=tcm_snapshot_attr_show, nargs=1,
-			type="string", dest="HBA/DEV", help="Show LV snapshot configfs attributes for TCM/IBLOCK storage object");
-	parser.add_option("--lvsnapinit", action="callback", callback=tcm_snapshot_init, nargs=4,
-			type="string", dest="HBA/DEV MAX_SNAPSHOTS SNAP_SIZE_STR SNAP_INTERVAL_STR", help="Initialize snapshot with default attributes");
-	parser.add_option("--lvsnapstart", action="callback", callback=tcm_snapshot_start, nargs=1,
-			type="string", dest="HBA/DEV", help="Enable snapshot daemon for TCM/IBLOCK LVM storage object");
-	parser.add_option("--lvsnapstat", action="callback", callback=tcm_snapshot_status, nargs=1,
-			type="string", dest="HBA/DEV", help="Display LV snapshot status for TCM/IBLOCK LVM storage object");
-	parser.add_option("--lvsnapstop", action="callback", callback=tcm_snapshot_stop, nargs=1,
-			type="string", dest="HBA/DEV", help="Disable snapshot daemon for TCM/IBLOCK LVM storage object");
-	parser.add_option("--pr", action="callback", callback=tcm_show_persistent_reserve_info, nargs=1,
-			type="string", dest="HBA/DEV", help="Show Persistent Reservation info")
-	parser.add_option("--praptpl", action="callback", callback=tcm_process_aptpl_metadata, nargs=1,
-			type="string", dest="HBA/DEV", help="Process PR APTPL metadata from file")
-	parser.add_option("--prshowmd", action="callback", callback=tcm_show_aptpl_metadata, nargs=1,
-			type="string", dest="HBA/DEV", help="Show APTPL metadata file")
-	parser.add_option("--ramdisk", action="callback", callback=tcm_create_ramdisk, nargs=2,
-			type="string", dest="HBA/DEV <PAGES>", help="Create and associate TCM/RAMDISK object")
-	parser.add_option("--scsi","--pscsi", action="callback", callback=tcm_create_pscsi, nargs=2,
-			type="string", dest="HBA/DEV <C:T:L>", help="Associate TCM/pSCSI object with Linux/SCSI device by bus location")
-	parser.add_option("--scsibyudev", "--pscsibyudev", action="callback", callback=tcm_create_pscsibyudev, nargs=2,
-			type="string", dest="HBA/DEV <UDEV_PATH>", help="Associate TCM/pSCSI object with Linux/SCSI device by UDEV Path")
-	parser.add_option("--setaluadelay", action="callback", callback=tcm_set_alua_nonop_delay, nargs=3,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <NON_OP_DELAY_IN_MSECS>", help="Set ALUA Target Port Group delay for Active/NonOptimized in milliseconds")
-	parser.add_option("--setaluapref", action="callback", callback=tcm_set_alua_tgpt_pref, nargs=2,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME>", help="Set ALUA Target Port Group Preferred Bit")
-	parser.add_option("--setaluastate", action="callback", callback=tcm_set_alua_state, nargs=3,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <ALUA_ACCESS_STATE>", help="Set ALUA access state for TG_PT_GP_NAME on Storage Object.  The value access states are \"o\" = active/optimized, \"a\" = active/nonoptimized, \"s\" = standby, \"u\" = unavailable")
-	parser.add_option("--setaluatransdelay", action="callback", callback=tcm_set_alua_trans_delay, nargs=3,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <TRANS_DELAY_IN_MSECS>", help="Set ALUA Target Port Group Transition delay")
-	parser.add_option("--setaluatype", action="callback", callback=tcm_set_alua_type, nargs=3,
-			type="string", dest="HBA/DEV <TG_PT_GP_NAME> <ALUA_ACCESS_TYPE>", help="Set ALUA access type for TG_PT_GP_NAME on Storage Object.  The value type states are \"both\" = implict/explict, \"explict\", \"implict\", or \"none\"")
-	parser.add_option("--setdevattr", action="callback", callback=tcm_set_dev_attrib, nargs=3,
-			type="string", dest="HBA/DEV <ATTRIB> <VALUE>", help="Set new value for TCM storage object device attribute")
-	parser.add_option("--setlugp", action="callback", callback=tcm_set_alua_lugp, nargs=2,
-			type="string", dest="HBA/DEV LU_GP_NAME", help="Set ALUA Logical Unit Group")
-	parser.add_option("--setudevpath", action="callback", callback=tcm_set_udev_path, nargs=2,
-			type="string", dest="HBA/DEV <udev_path>", help="Set UDEV Path Information, only used when --createdev did not contain <udev_path> as parameter")
-	parser.add_option("--setunitserial", action="callback", callback=tcm_set_wwn_unit_serial, nargs=2,
-			type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information")
-	parser.add_option("--setunitserialwithmd", action="callback", callback=tcm_set_wwn_unit_serial_with_md, nargs=2,
-			type="string", dest="HBA/DEV <unit_serial>", help="Set T10 EVPD Unit Serial Information and process PR APTPL metadata")
-	parser.add_option("--udevpath", action="callback", callback=tcm_show_udev_path, nargs=1,
-	
-			type="string", dest="HBA/DEV", help="Show UDEV Path Information for TCM storage object")
-	parser.add_option("--unload", action="callback", callback=tcm_unload, nargs=0,
-			help="Unload target_core_mod")
-	parser.add_option("--version", action="callback", callback=tcm_version, nargs=0,
-			help="Display target_core_mod version information")
-	parser.add_option("--wwn", action="callback", callback=tcm_show_wwn_info, nargs=1,
-			type="string", dest="HBA/DEV", help="Show WWN info")
+    parser = OptionParser()
 
-	(options, args) = parser.parse_args()
-	if len(sys.argv) == 1:
-		parser.print_help()
-		sys.exit(0)
-	elif not re.search('--', sys.argv[1]):
-		tcm_err("Unknown CLI option: " + sys.argv[1])
+    for opt in cmdline_options:
+        # cmd_aliases can be string or tuple of strings.
+        # we're unpacking below, so convert strings to 1 item tuples
+        cmd_aliases = opt["opt_str"]
+        if isinstance(cmd_aliases, basestring):
+            cmd_aliases = (cmd_aliases,)
+        del opt["opt_str"]
+        # common params for all options
+        opt["action"] = "callback"
+        opt["type"] = "string"
+        parser.add_option(*cmd_aliases, **opt)
 
+    (options, args) = parser.parse_args()
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+    elif not re.search('--', sys.argv[1]):
+        tcm_err("Unknown CLI option: " + sys.argv[1])
+        
 if __name__ == "__main__":
-	main()
+    main()
