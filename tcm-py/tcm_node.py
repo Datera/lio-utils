@@ -23,8 +23,7 @@ def tcm_err(msg):
 	sys.exit(1)
 
 def tcm_get_cfs_prefix(arg):
-	path = "/sys/kernel/config/target/core/" + arg
-	return path
+	return "/sys/kernel/config/target/core/" + arg
 
 def tcm_add_alua_lugp(option, opt_str, value, parser):
 	lu_gp_name = str(value)
