@@ -335,9 +335,7 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 
 	cfs_path = cfs_path_tmp[0] + "/" + cfs_path_tmp[1]
 
-	tmp_params = str(value[1])
-	dev_params = tmp_params.split(' ')
-	plugin_params = dev_params
+	plugin_params = str(value[1]).split(' ')
 	print "Device Params " + str(plugin_params)
 	
 	ret = os.mkdir(cfs_dev_path)
