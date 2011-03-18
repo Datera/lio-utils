@@ -650,8 +650,8 @@ def tcm_dump_alua_state(alua_state_no):
 		return "Unavailable"
 	elif alua_state_no == "15":
 		return "Transition"
-
-	return ""
+	else:
+		return "Unknown"
 
 def tcm_list_alua_tgptgp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
