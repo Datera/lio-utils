@@ -46,8 +46,6 @@ def tcm_add_alua_lugp(option, opt_str, value, parser):
 	else:
 		print "Successfully created ALUA Logical Unit Group: " + lu_gp_name
 
-	return
-
 def tcm_add_alua_tgptgp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -75,8 +73,6 @@ def tcm_add_alua_tgptgp(option, opt_str, value, parser):
 		tcm_alua_set_write_metadata(alua_cfs_path)
 		print "Successfully created ALUA Target Port Group: " + tg_pt_gp_name
 
-	return
-
 def tcm_alua_check_metadata_dir(cfs_dev_path):
 
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
@@ -91,20 +87,16 @@ def tcm_alua_check_metadata_dir(cfs_dev_path):
 	if ret:
 		tcm_err("Unable to create ALUA metadata directory: " + alua_path)
 
-	return
-
 def tcm_alua_delete_metadata_dir(unit_serial):
 
 	alua_path = "/var/target/alua/tpgs_" + unit_serial + "/"
 	if os.path.isdir(alua_path) == False:
-		return;
+		return
 
 	rm_op = "rm -rf " + alua_path
 	ret = os.system(rm_op)
 	if ret:
 		tcm_err("Unable to remove ALUA metadata directory: " + alua_path)
-
-	return
 
 def tcm_alua_set_write_metadata(alua_cfs_path):
 	alua_write_md_file = alua_cfs_path + "/alua_write_metadata"
@@ -118,7 +110,6 @@ def tcm_alua_set_write_metadata(alua_cfs_path):
 		tcm_err("Unable to enable writeable ALUA metadata for " + alua_write_md_file)
 	
 	p.close()
-	return
 
 def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 	alua_cfs_path = cfs_dev_path + "/alua/" + tg_pt_gp_name
@@ -181,8 +172,6 @@ def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 	# in /var/target/alua/tpgs_$T10_UNIT_SERIAL/$TG_PT_GP_NAME
 	tcm_alua_set_write_metadata(alua_cfs_path)
 	p.close()
-	return	
-			
 
 def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -218,7 +207,6 @@ def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
 
 	# Now process the ALUA metadata for this group
 	tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id)
-	return
 
 def tcm_delhba(option, opt_str, value, parser):
 	hba_name = str(value)
@@ -240,8 +228,6 @@ def tcm_delhba(option, opt_str, value, parser):
 	else:
 		print "Successfully released TCM HBA: " + hba_path
 
-	return
-
 def tcm_del_alua_lugp(option, opt_str, value, parser):
 	lu_gp_name = str(value)
 
@@ -254,8 +240,6 @@ def tcm_del_alua_lugp(option, opt_str, value, parser):
 		tcm_err("Unable to delete ALUA Logical Unit Group: " + lu_gp_name)
 	else:
 		print "Successfully deleted ALUA Logical Unit Group: " + lu_gp_name
-
-	return
 
 def __tcm_del_alua_tgptgp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -273,8 +257,6 @@ def __tcm_del_alua_tgptgp(option, opt_str, value, parser):
 		tcm_err("Unable to delete ALUA Target Port Group: " + tg_pt_gp_name)
 	else:
 		print "Successfully deleted ALUA Target Port Group: " + tg_pt_gp_name
-
-	return
 
 def tcm_del_alua_tgptgp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -295,8 +277,6 @@ def tcm_del_alua_tgptgp(option, opt_str, value, parser):
 	ret = os.system(rm_op)
 	if ret:
 		tcm_err("Unable to remove ALUA metadata from: " + alua_md_path)
-	
-	return
 
 def tcm_generate_uuid_for_unit_serial(cfs_dev_path):
 	uuidgen_op = 'uuidgen'
@@ -310,8 +290,6 @@ def tcm_generate_uuid_for_unit_serial(cfs_dev_path):
 
 	swus_val = [cfs_dev_path,uuid.rstrip()]
 	tcm_set_wwn_unit_serial(None, None, swus_val, None)
-
-	return
 
 def tcm_createvirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -387,8 +365,6 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 		os.rmdir(cfs_dev_path);
 		tcm_err("Unable to register TCM/ConfigFS storage object: " + cfs_dev_path)
 
-	return
-
 def tcm_get_unit_serial(cfs_dev_path):
 
 	unit_serial_file = cfs_dev_path + "/wwn/vpd_unit_serial"
@@ -418,8 +394,7 @@ def tcm_show_aptpl_metadata(option, opt_str, value, parser):
 	if (os.path.isfile(aptpl_file) == False):
 		tcm_err("Unable to dump PR APTPL metadata file: " + aptpl_file);
 	
-	os.system("cat " + aptpl_file);	
-	return
+	os.system("cat " + aptpl_file)
 
 def tcm_delete_aptpl_metadata(unit_serial):
 
@@ -431,8 +406,6 @@ def tcm_delete_aptpl_metadata(unit_serial):
 	ret = os.system(rm_op)
 	if ret:
 		tcm_err("Unable to delete PR APTPL metadata: " + aptpl_file)
-
-	return
 
 def tcm_process_aptpl_metadata(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -505,7 +478,6 @@ def tcm_process_aptpl_metadata(option, opt_str, value, parser):
 		line = p.readline()
 
 	p.close()
-	return
 
 def tcm_establishvirtdev(option, opt_str, value, parser):
 	cfs_dev = str(value[0])
@@ -513,7 +485,6 @@ def tcm_establishvirtdev(option, opt_str, value, parser):
 
 	vals = [cfs_dev, plugin_params, 1]
 	tcm_createvirtdev(None, None, vals, None)
-	return
 
 def tcm_create_pscsi(option, opt_str, value, parser):
 	cfs_dev = str(value[0])
@@ -524,7 +495,6 @@ def tcm_create_pscsi(option, opt_str, value, parser):
 	pscsi_params = "scsi_channel_id=" + ctl_params[0] + ",scsi_target_id=" + ctl_params[1] + ",scsi_lun_id=" + ctl_params[2]
 	vals = [cfs_dev, pscsi_params]
 	tcm_createvirtdev(None, None, vals, None)
-	return
 
 def tcm_create_pscsibyudev(option, opt_str, value, parser):
 	cfs_dev = str(value[0])
@@ -533,12 +503,10 @@ def tcm_create_pscsibyudev(option, opt_str, value, parser):
 
 	print " ConfigFS Device Alias: " + cfs_dev
 	tcm_createvirtdev(option, opt_str, value, parser)
-	return
 
 def tcm_create_iblock(option, opt_str, value, parser):
 
 	tcm_createvirtdev(option, opt_str, value, parser)
-	return
 
 def tcm_create_fileio(option, opt_str, value, parser):
 	cfs_dev = str(value[0])
@@ -548,12 +516,10 @@ def tcm_create_fileio(option, opt_str, value, parser):
 	fileio_params = "fd_dev_name=" + file + ",fd_dev_size=" + size_in_bytes
 	vals = [cfs_dev, fileio_params]	
 	tcm_createvirtdev(None, None, vals, None)
-	return
 
 def tcm_create_ramdisk(option, opt_str, value, parser):
 
 	tcm_createvirtdev(option, opt_str, value, parser)
-	return
 
 def __tcm_freevirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -585,8 +551,6 @@ def __tcm_freevirtdev(option, opt_str, value, parser):
 	else:
 		tcm_err("Failed to release ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret)
 
-	return
-
 def tcm_freevirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -600,7 +564,6 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 	# PR APTPL and ALUA metadata
 	tcm_delete_aptpl_metadata(unit_serial)
 	tcm_alua_delete_metadata_dir(unit_serial)
-	return
 
 def tcm_list_dev_attribs(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -614,8 +577,6 @@ def tcm_list_dev_attribs(option, opt_str, value, parser):
 		value = p.read(16)
 		p.close()
 		print "       " + attrib + ": " + value.rstrip()
-
-	return
 
 def tcm_list_hbas(option, opt_str, value, parser):
 
@@ -655,8 +616,6 @@ def tcm_list_hbas(option, opt_str, value, parser):
 			print "        " + udev_str
 			os.close(u)
 
-	return
-
 def tcm_list_alua_lugps(option, opt_str, value, parser):
 
 	for lu_gp in os.listdir(tcm_root + "/alua/lu_gps"):
@@ -679,8 +638,6 @@ def tcm_list_alua_lugps(option, opt_str, value, parser):
 		while i < len(lu_gp_members) - 1:
 			print "         " + lu_gp_members[i]
 			i += 1
-
-	return
 
 def tcm_dump_alua_state(alua_state_no):
 	
@@ -763,8 +720,6 @@ def tcm_list_alua_tgptgp(option, opt_str, value, parser):
 		print "             " + tg_pt_gp_members[i]
 		i += 1
 
-        return
-
 def tcm_list_alua_tgptgps(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -774,8 +729,6 @@ def tcm_list_alua_tgptgps(option, opt_str, value, parser):
 	for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
 		vals = [str(value), tg_pt_gp]
 		tcm_list_alua_tgptgp(None, None, vals, None)
-
-	return
 
 def tcm_snapshot_attr_set(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -800,7 +753,6 @@ def tcm_snapshot_attr_set(option, opt_str, value, parser):
 
 	p.close()
 	print "Successfully updated snapshot attribute: " + attr + "=" + value + " for " + cfs_dev_path
-	return
 
 def tcm_snapshot_attr_show(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -816,8 +768,6 @@ def tcm_snapshot_attr_show(option, opt_str, value, parser):
 		p.close()
 		print snap_attr +"=" + val.rstrip()	
 
-	return
-
 def tcm_snapshot_init(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -832,8 +782,6 @@ def tcm_snapshot_init(option, opt_str, value, parser):
 	ret = tcm_snap.snap_set_cfs_defaults(cfs_dev_path, max_snapshots, lv_size, snap_interval)
 	if ret:
 		tcm_err("Unable to initialize snapshot attributes for " + cfs_dev_path)
-	
-	return
 
 def tcm_snapshot_start(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -875,7 +823,6 @@ def tcm_snapshot_start(option, opt_str, value, parser):
 		tcm_err("Unable to set snap/enabled for " + cfs_dev_path)
 
 	p.close()
-	return
 
 def tcm_snapshot_status(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -899,7 +846,6 @@ def tcm_snapshot_status(option, opt_str, value, parser):
 #	print "lv_name: " + lv_name
 	
 	tcm_snap.snap_dump_lvs_info(vg_group, lv_name)
-	return
 
 def tcm_snapshot_stop(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -952,7 +898,6 @@ def tcm_snapshot_stop(option, opt_str, value, parser):
 		p.close()
 		tcm_err("Unable to set snap/enabled for " + cfs_dev_path)
 	p.close()
-	return
 
 def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -964,8 +909,6 @@ def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 	ret = os.system(pr_show_op)
 	if ret:
 		tcm_err("Unable to disable storage object persistent reservation info")
-
-	return
 
 def tcm_set_alua_state(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -997,8 +940,6 @@ def tcm_set_alua_state(option, opt_str, value, parser):
 	else:
 		print "Successfully set primary ALUA access state for TG PT Group: " + alua_gp + " to " + tcm_dump_alua_state(str(alua_state))
 
-	return
-
 def tcm_set_alua_type(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1029,8 +970,6 @@ def tcm_set_alua_type(option, opt_str, value, parser):
 	else:
 		print "Successfully set ALUA access type for TG PT Group: " + alua_gp + " to " + new_alua_type_str
 
-	return
-
 def tcm_set_alua_nonop_delay(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1050,8 +989,6 @@ def tcm_set_alua_nonop_delay(option, opt_str, value, parser):
 		tcm_err("Unable to set ALUA Active/NonOptimized Delay for TG PT Group: " + tg_pt_gp_base)
 	else:
 		print "Successfully set ALUA Active/NonOptimized Delay to " + delay_msecs + " milliseconds for TG PT Group: " + tg_pt_gp_base
-	
-	return
 
 def tcm_set_alua_trans_delay(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -1073,8 +1010,6 @@ def tcm_set_alua_trans_delay(option, opt_str, value, parser):
 	else:
 		print "Successfully set ALUA Transition Delay to " + delay_msecs + " milliseconds for TG PT Group: " + tg_pt_gp_base
 
-	return
-
 def tcm_clear_alua_tgpt_pref(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1092,8 +1027,6 @@ def tcm_clear_alua_tgpt_pref(option, opt_str, value, parser):
 		tcm_err("Unable to disable PREFERRED bit for TG Pt Group: " + alua_gp)
 	else:
 		print "Successfully disabled PREFERRED bit for TG Pt Group: " + alua_gp
-
-	return
 
 def tcm_set_alua_tgpt_pref(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -1113,8 +1046,6 @@ def tcm_set_alua_tgpt_pref(option, opt_str, value, parser):
 	else:
 		print "Successfully enabled PREFERRED bit for TG Pt Group: " + alua_gp
 
-	return
-
 def tcm_set_alua_lugp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1132,8 +1063,6 @@ def tcm_set_alua_lugp(option, opt_str, value, parser):
 	else:
 		print "Successfully set ALUA Logical Unit Group: " + lu_gp_name + " for TCM storage object: " + cfs_dev_path
 
-	return
-
 def tcm_set_dev_attrib(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1150,8 +1079,6 @@ def tcm_set_dev_attrib(option, opt_str, value, parser):
 	else:
 		print "Successfully set TCM storage object attribute: " + attrib + "=" + value + " for " + cfs_dev_path + "/attrib/" + attrib
 
-	return
-
 def tcm_set_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1164,7 +1091,6 @@ def tcm_set_udev_path(option, opt_str, value, parser):
 		tcm_err("Unable to set UDEV path for " + cfs_dev_path)
 
 	print "Set UDEV Path: " + value[1] + " for " + cfs_dev_path
-	return
 
 def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -1178,7 +1104,6 @@ def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 		tcm_err("Unable to set T10 WWN Unit Serial for " + cfs_dev_path)
 
 	print "Set T10 WWN Unit Serial for " + cfs_unsplit + " to: " + value[1]
-	return
 
 def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -1192,8 +1117,6 @@ def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
 	# Make sure the ALUA metadata directory exists for this storage object
 	tcm_alua_check_metadata_dir(cfs_dev_path)
 
-	return
-
 def tcm_show_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1205,8 +1128,6 @@ def tcm_show_udev_path(option, opt_str, value, parser):
 	if ret:
 		tcm_err("Unable to show UDEV path for " + cfs_dev_path)
 
-	return
-
 def tcm_show_wwn_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
@@ -1217,8 +1138,6 @@ def tcm_show_wwn_info(option, opt_str, value, parser):
 	ret = os.system(wwn_show_op)
 	if ret:
 		tcm_err("Unable to disable storage object WWN info")
-
-	return
 
 def tcm_unload(option, opt_str, value, parser):
 
@@ -1258,12 +1177,8 @@ def tcm_unload(option, opt_str, value, parser):
 	if ret:
 		tcm_err("Unable to rmmod target_core_mod")
 
-	return
-
 def tcm_version(option, opt_str, value, parser):
-
 	os.system("cat /sys/kernel/config/target/version")
-	return
 
 cmdline_options = ( \
     dict(opt_str="--addlungp", callback=tcm_add_alua_lugp, nargs=1,
