@@ -331,22 +331,22 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 	result = re.search('pscsi_', hba_cfs)
 	if result:
 		gen_uuid = 0
-		ret = tcm_pscsi.pscsi_createvirtdev(cfs_path, plugin_params)
+		ret = tcm_pscsi.createvirtdev(cfs_path, plugin_params)
 	result = re.search('stgt_', hba_cfs)
 	if result:
 		print "stgt"
 	result = re.search('iblock_', hba_cfs)
 	if result:
-		ret = tcm_iblock.iblock_createvirtdev(cfs_path, plugin_params)
+		ret = tcm_iblock.createvirtdev(cfs_path, plugin_params)
 	result = re.search('rd_dr_', hba_cfs)
 	if result:
-		ret = tcm_ramdisk.rd_createvirtdev(cfs_path, plugin_params)
+		ret = tcm_ramdisk.createvirtdev(cfs_path, plugin_params)
 	result = re.search('rd_mcp_', hba_cfs)
 	if result:
-		ret = tcm_ramdisk.rd_createvirtdev(cfs_path, plugin_params)
+		ret = tcm_ramdisk.createvirtdev(cfs_path, plugin_params)
 	result = re.search('fileio_', hba_cfs)
 	if result:
-		ret = tcm_fileio.fd_createvirtdev(cfs_path, plugin_params)
+		ret = tcm_fileio.createvirtdev(cfs_path, plugin_params)
 
 	if not ret:
 		info_op = "cat " + cfs_dev_path + "/info"

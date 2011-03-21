@@ -41,12 +41,12 @@ def pscsi_scan_lsscsi(option, opt_str, value, parser):
 		if not ret:
 			print "Successfully added ConfigFS path " + cfs_path
 
-def pscsi_createvirtdev(path, params):
+def createvirtdev(path, params):
 	
-#	print "Calling pscsi_createvirtdev: path " + path
+#	print "Calling pscsi createvirtdev: path " + path
 	cfs_path = tcm_root + "/" + path + "/"
 
-#	print "Calling pscsi_createvirtdev: params " + str(params)
+#	print "Calling pscsi createvirtdev: params " + str(params)
 	pscsi_params = params[0]
 #	print pscsi_params
 

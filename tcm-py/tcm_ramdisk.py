@@ -7,11 +7,11 @@ from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
 
-def rd_createvirtdev(path, params):
+def createvirtdev(path, params):
 	
-#	print "Calling rd_createvirtdev: path " + path
+#	print "Calling ramdisk createvirtdev: path " + path
 	cfs_path = tcm_root + "/" + path + "/"
-#	print "Calling rd_createvirtdev: params " + str(params)
+#	print "Calling ramdisk createvirtdev: params " + str(params)
 	rd_pages = params[0]
 
 	rd_params = "rd_pages=" + rd_pages

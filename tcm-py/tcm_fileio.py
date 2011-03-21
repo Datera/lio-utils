@@ -7,11 +7,11 @@ from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
 
-def fd_createvirtdev(path, params):
+def createvirtdev(path, params):
 	
-#	print "Calling fd_createvirtdev: path " + path
+#	print "Calling fileio createvirtdev: path " + path
 	cfs_path = tcm_root + "/" + path + "/"
-#	print "Calling fd_createvirtdev: params " + str(params)
+#	print "Calling fileio createvirtdev: params " + str(params)
 	fd_params = str(params)
 
         # Extract the udev_dev path from fd_dev_name=

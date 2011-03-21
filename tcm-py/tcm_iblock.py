@@ -7,10 +7,10 @@ from optparse import OptionParser
 
 tcm_root = "/sys/kernel/config/target/core"
 
-def iblock_createvirtdev(path, params):
-#	print "Calling iblock_createvirtdev: path " + path
+def createvirtdev(path, params):
+#	print "Calling iblock createvirtdev: path " + path
 	cfs_path = tcm_root + "/" + path + "/"
-#	print "Calling iblock_createvirtdev: params " + str(params)
+#	print "Calling iblock createvirtdev: params " + str(params)
 	path = params[0]
 	if not re.search('/dev/', path):
 		print "IBLOCK: Please reference a valid /dev/ block_device"
