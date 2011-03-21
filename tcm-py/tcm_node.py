@@ -1158,17 +1158,8 @@ def tcm_unload(option, opt_str, value, parser):
 		tcm_del_alua_lugp(None, None, lu_gp, None)
 
 	# Unload TCM subsystem plugin modules
-	rmmod_op = "rmmod target_core_iblock"
-	ret = os.system(rmmod_op)
-
-	rmmod_op = "rmmod target_core_file"
-	ret = os.system(rmmod_op)
-
-	rmmod_op = "rmmod target_core_pscsi"
-	ret = os.system(rmmod_op)
-
-	rmmod_op = "rmmod target_core_stgt"
-	ret = os.system(rmmod_op)
+	for module in ("iblock", "file", "pscsi", "stgt"):
+		os.system("rmmod target_core_%s" % module)
 
 	# Unload TCM Core
 	rmmod_op = "rmmod target_core_mod"
