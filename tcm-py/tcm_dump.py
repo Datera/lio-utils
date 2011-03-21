@@ -19,7 +19,7 @@ import lio_dump
 tcm_root = "/sys/kernel/config/target/core"
 
 def tcm_dump_hba_devices():
-	return	
+	pass
 
 def tcm_dump_configfs(option, opt_str, value, parser):
 
@@ -247,9 +247,6 @@ def tcm_dump_configfs(option, opt_str, value, parser):
 			if snap_enabled == 1:
 				print "tcm_node --lvsnapstart " + f + "/" + g
 
-
-	return
-
 def tcm_backup_to_file(option, opt_str, value, parser):
 	datetime = str(value)
 	
@@ -332,7 +329,6 @@ def tcm_full_backup(option, opt_str, value, parser):
 		sys.exit(1)
 
 	print "Successfully updated default config " + tcm_file 
-	return
 
 def tcm_overwrite_default(option, opt_str, value, parser):
 
@@ -342,7 +338,6 @@ def tcm_overwrite_default(option, opt_str, value, parser):
 
 	val = "1"
 	tcm_full_backup(None, None, val, None)
-	return
 
 def main():
 	

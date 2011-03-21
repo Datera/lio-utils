@@ -64,7 +64,6 @@ def get_lvcreate_path():
 	lvcreate_bin = tmp.rstrip()
 	printattr("lvcreate_bin: " + lvcreate_bin)
 	p.close()	
-	return
 
 def get_lvdisplay_path():
 	global lvdisplay_bin
@@ -83,7 +82,6 @@ def get_lvdisplay_path():
 	lvdisplay_bin = tmp.rstrip()
 	printattr("lvdisplay_bin: " + lvdisplay_bin)
 	p.close()
-	return
 
 def get_lvremove_bin():
 	global lvremove_bin
@@ -102,7 +100,6 @@ def get_lvremove_bin():
 	lvremove_bin = tmp.rstrip()
 	printattr("lvremove_bin: " + lvremove_bin)
 	p.close()
-	return
 
 def get_vgdisplay_bin():
         global vgdisplay_bin
@@ -121,7 +118,6 @@ def get_vgdisplay_bin():
         vgdisplay_bin = tmp.rstrip()
 	printattr("vgdisplay_bin: " + vgdisplay_bin)
         p.close()
-        return
 
 def get_cfs_udev_path(cfs_path):
 	
@@ -351,8 +347,6 @@ def get_cfs_snap_attrs(cfs_path):
 	get_cfs_usage_warn(cfs_path)
 	get_cfs_vgs_usage_warn(cfs_path)
 
-	return
-
 def get_cfs_snap_pid(cfs_path):
 	snap_attr = cfs_path + "/snap/pid"
 	p = open(snap_attr, 'rU')
@@ -379,7 +373,6 @@ def set_cfs_snap_pid(cfs_path):
 		return 1
 
 	p.close()
-	return
 
 def set_cfs_snap_usage(cfs_path, usage):
 
@@ -394,7 +387,6 @@ def set_cfs_snap_usage(cfs_path, usage):
 		return 1
 
 	p.close()
-	return
 
 def snap_lvcreate(lvm_path):
 
@@ -414,7 +406,6 @@ def snap_lvcreate(lvm_path):
 		return 1
 
 	printdbg("Successfully created LVM snapshot: " + snap_name)
-	return
 
 def snap_lvremove(snap_path):
 
@@ -425,8 +416,6 @@ def snap_lvremove(snap_path):
 	if ret:
 		print "Unable to lvremove: " + snap_path
 		return 1
-
-	return
 
 def snap_set_cfs_attrib(cfs_path, attr, val):
 	
@@ -444,7 +433,6 @@ def snap_set_cfs_attrib(cfs_path, attr, val):
 
 	print "Set attribute: " + attr + "=" + val
 	p.close()
-	return
 
 def snap_get_seconds_from_str(timestr):
 	secs = 0	
@@ -521,7 +509,6 @@ def snap_set_cfs_defaults(cfs_path, max_snapshots, lv_size, snap_interval):
 
 	print "Successfully set default snapshot attributes for " + cfs_path
 	print "You can futher customize these settings with tcm_node --lvsnapattrset and --lvsnapattrshow"
-	return
 
 def snap_dump_lvs_info(vg_group, lv_name):
 	snap_percent_list = []
@@ -559,7 +546,6 @@ def snap_dump_lvs_info(vg_group, lv_name):
 	print "Total snapshot usage percentage for LV: " + str(get_average(snap_percent_list))
 	check_vgs_extents_usage()
 	print "Total volume group usage percentage: " + str(float(snap_vgs_usage))
-	return
 
 def snap_check_status(lvm_path, cfs_path):
 	global snap_avgr
@@ -675,8 +661,6 @@ def snap_check_status(lvm_path, cfs_path):
 		printdbg("Removing oldest snapshot: " + snap_highest_path)
 		snap_lvremove(snap_highest_path)	
 
-	return
-
 def send_snap_usage_warn(cfs_path, warning):
 
 	if not snap_contact:
@@ -702,7 +686,6 @@ def send_snap_usage_warn(cfs_path, warning):
 #	s = smtplib.SMTP(smtp_server)
 #	s.sendmail(source, sink, message)
 #	s.quit()
-	return
 
 def check_for_usage_warn(cfs_path):
 
@@ -736,7 +719,6 @@ def check_vgs_extents_usage():
 
 	if (snap_vgs_usage >= snap_vgs_usage_warn):
 		return 1
-	return
 
 def check_for_vgs_usage_warn(cfs_path):
 

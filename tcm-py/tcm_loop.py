@@ -30,7 +30,6 @@ def tcm_generate_naa_sas_address():
 def tcm_loop_add_target_www(option, opt_str, value, parser):
 	sas_target_address = tcm_generate_naa_sas_address();
 	sas_target_tpgt = str(value)
-	return
 
 def tcm_loop_del_target_wwn(option, opt_str, value, parser):
 	sas_target_address = str(value[0])
@@ -49,8 +48,6 @@ def tcm_loop_del_target_wwn(option, opt_str, value, parser):
 		print "Unable to remove configfs group: " + naa_dir
 	else:
 		print "Successfully removed NAA based SAS Target Address: " + naa_dir + "/" + tpgt_dir
-
-	return
 
 def tcm_loop_create_nexus(option, opt_str, value, parser):
 	sas_target_address = tcm_generate_naa_sas_address();	
@@ -81,8 +78,6 @@ def tcm_loop_create_nexus(option, opt_str, value, parser):
 		print "  SAS Target Address: " + sas_target_address
 		print "  SAS Initiator Address " + sas_initiator_address
 
-	return
-
 def tcm_loop_delete_nexus(option, opt_str, value, parser):
 	sas_target_address = str(value[0])
 	sas_target_tpgt = str(value[1])
@@ -110,9 +105,7 @@ def tcm_loop_delete_nexus(option, opt_str, value, parser):
 			sys.exit(1)
 
 		print "Successfully deleted virtual SCSI I_T Nexus between TCM and Linux/SCSI HBA"
-		break
-
-	return
+		return
 
 def tcm_loop_addlun(option, opt_str, value, parser):
 	sas_target_address = str(value[0])
@@ -138,8 +131,6 @@ def tcm_loop_addlun(option, opt_str, value, parser):
 	else:
 		print "Unable to create SAS Target Port to local virtual SCSI Logical Unit"
 		sys.exit(1)
-
-	return
 
 def tcm_loop_dellun(option, opt_str, value, parser):
 	sas_target_address = str(value[0])
@@ -179,8 +170,6 @@ def tcm_loop_dellun(option, opt_str, value, parser):
 		sys.exit(1)
 	else:
 		print "Succesfully deleted local virtual SCSI Logical Unit from SAS Target Port"
-		
-	return
 
 def tcm_loop_unload(option, opt_str, value, parser):
 
@@ -226,7 +215,6 @@ def tcm_loop_unload(option, opt_str, value, parser):
 		sys.exit(1)
 
 	print "Successfully removed tcm_loop kernel module"
-	return
 
 def main():
 

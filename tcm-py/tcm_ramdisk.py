@@ -31,10 +31,8 @@ def rd_createvirtdev(path, params):
 		print "RAMDISK: createvirtdev failed for enable_opt with " + rd_params
 		return -1
 
-	return
-
 def rd_freevirtdev():
-	return
+	pass
 
 def rd_get_params(path):
 

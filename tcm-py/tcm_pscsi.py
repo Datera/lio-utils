@@ -15,7 +15,6 @@ def print_lsscsi(option, opt_str, value, parser):
 		line = p.readline()
 		if not line: break
 		print line,
-	return
 
 def pscsi_get_hba_prefix(arg):
 	path = "/sys/kernel/config/target/core/pscsi_" + arg
@@ -41,7 +40,6 @@ def pscsi_scan_lsscsi(option, opt_str, value, parser):
 		print "os.path.mkdir ret: " + str(ret)
 		if not ret:
 			print "Successfully added ConfigFS path " + cfs_path
-	return
 
 def pscsi_createvirtdev(path, params):
 	
@@ -127,10 +125,8 @@ def pscsi_createvirtdev(path, params):
 		print "pSCSI: createvirtdev failed for enable_opt with " + pscsi_params
 		return -1
 
-	return
-
 def pscsi_freevirtdev():
-	return
+	pass
 
 def pscsi_get_params(path):
 	# Reference by udev_path if available   

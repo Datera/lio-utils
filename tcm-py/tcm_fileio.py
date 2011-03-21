@@ -47,10 +47,8 @@ def fd_createvirtdev(path, params):
 		print "FILEIO: createvirtdev failed for enable_opt with " + params[0]
 		return -1
 
-	return
-
 def fd_freevirtdev():
-	return
+	pass
 
 def fd_get_params(path):
         # Reference by udev_path if available   

@@ -51,10 +51,8 @@ def iblock_createvirtdev(path, params):
 		print "IBLOCK: createvirtdev failed for enable_opt with " + enable_opt
 		return -1
 
-	return
-
 def iblock_freevirtdev():
-	return
+	pass
 
 def iblock_get_params(path):
 	# Reference by udev_path if available	
