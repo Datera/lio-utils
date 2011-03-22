@@ -148,8 +148,7 @@ def tcm_delhba(option, opt_str, value, parser):
 		if g == "hba_info" or g == "hba_mode":
 			continue
 
-		tmp_str = hba_name + "/" + g
-		__tcm_freevirtdev(None, None, tmp_str, None)
+		__tcm_freevirtdev(hba_name + "/" + g)
 
 	os.rmdir(hba_path)
 
@@ -437,7 +436,7 @@ def tcm_create_ramdisk(option, opt_str, value, parser):
 
 	tcm_createvirtdev(option, opt_str, value, parser)
 
-def __tcm_freevirtdev(option, opt_str, value, parser):
+def __tcm_freevirtdev(value):
 	cfs_unsplit = str(value)
 	cfs_path = cfs_unsplit.split('/')
 	hba_cfs = cfs_path[0]
@@ -475,7 +474,7 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
 
-	__tcm_freevirtdev(option, opt_str, value, parser)
+	__tcm_freevirtdev(value)
 	# For explict tcm_node --freedev, delete any remaining
 	# PR APTPL and ALUA metadata
 	tcm_delete_aptpl_metadata(unit_serial)
