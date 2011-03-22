@@ -28,9 +28,11 @@ def tcm_read(filename):
 	with open(filename) as f:
 		return f.read()
 
-def tcm_write(filename, value):
+def tcm_write(filename, value, newline=True):
 	with open(filename, "w") as f:
-		f.write(value + "\n")
+		f.write(value)
+		if newline:
+			f.write("\n")
 
 def tcm_get_cfs_prefix(arg):
 	return tcm_root + "/" + arg
@@ -196,200 +198,117 @@ def tcm_generate_uuid_for_unit_serial(cfs_dev_path):
 	uuid = str(uuid.uuid4())
 	tcm_set_wwn_unit_serial(None, None, (cfs_dev_path, uuid), None)
 
+tcm_types = ( \
+    dict(name="pscsi", module=tcm_pscsi, gen_uuid=False),
+    dict(name="stgt", module=None, gen_uuid=True),
+    dict(name="iblock", module=tcm_iblock, gen_uuid=True),
+    dict(name="rd_dr", module=tcm_ramdisk, gen_uuid=True),
+    dict(name="rd_mcp", module=tcm_ramdisk, gen_uuid=True),
+    dict(name="fileio", module=tcm_fileio, gen_uuid=True),
+)
+
 def tcm_createvirtdev(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
-	cfs_path_tmp = cfs_unsplit.split('/')
-
-	hba_cfs = cfs_path_tmp[0]
-	print " ConfigFS HBA: " + hba_cfs
-	cfs_hba_path = tcm_get_cfs_prefix(hba_cfs)
-	if (os.path.isdir(cfs_hba_path) == False):
-		ret = os.mkdir(cfs_hba_path)
-		if not ret:
-			print "Successfully added TCM/ConfigFS HBA: " + hba_cfs
-		else:
-			tcm_err("Unable to create TCM/ConfigFS HBA: " + cfs_hba_path)
-
-	dev_vfs_alias = cfs_path_tmp[1]
-	print " ConfigFS Device Alias: " + dev_vfs_alias
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path)):
-		tcm_err("TCM/ConfigFS storage object already exists: " + cfs_dev_path)
-
-	cfs_path = cfs_path_tmp[0] + "/" + cfs_path_tmp[1]
-
-	plugin_params = str(value[1]).split(' ')
+	hba_cfs, dev_vfs_alias = value[0].split('/')
+	plugin_params = value[1].split(' ')
 	print "Device Params " + str(plugin_params)
-	
-	ret = os.mkdir(cfs_dev_path)
-	if ret:
-		tcm_err("Failed to create ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret)
 
-	# Calls into submodules depending on target_core_mod subsystem plugin
-	ret = 0
-	gen_uuid = 1
+	# create hba if it doesn't exist
+	cfs_hba_path = tcm_get_cfs_prefix(hba_cfs)
+	if not os.path.isdir(cfs_hba_path):
+		os.mkdir(cfs_hba_path)
+
+	# create dev if it doesn't exist
+	cfs_dev_path = cfs_hba_path + "/" + dev_vfs_alias
+	if os.path.isdir(cfs_dev_path):
+		tcm_err("TCM/ConfigFS storage object already exists: " + cfs_dev_path)
+	else:
+		os.mkdir(cfs_dev_path)
+
 	# Determine if --establishdev is being called and we want to skip
 	# the T10 Unit Serial Number generation
-	if len(value) > 2:
-		if str(value[2]) == "1":
-			gen_uuid = 0
+	gen_uuid = True
+	if len(value) > 2 and str(value[2]) == "1":
+		gen_uuid = False
 
-	result = re.search('pscsi_', hba_cfs)
-	if result:
-		gen_uuid = 0
-		ret = tcm_pscsi.createvirtdev(cfs_path, plugin_params)
-	result = re.search('stgt_', hba_cfs)
-	if result:
-		print "stgt"
-	result = re.search('iblock_', hba_cfs)
-	if result:
-		ret = tcm_iblock.createvirtdev(cfs_path, plugin_params)
-	result = re.search('rd_dr_', hba_cfs)
-	if result:
-		ret = tcm_ramdisk.createvirtdev(cfs_path, plugin_params)
-	result = re.search('rd_mcp_', hba_cfs)
-	if result:
-		ret = tcm_ramdisk.createvirtdev(cfs_path, plugin_params)
-	result = re.search('fileio_', hba_cfs)
-	if result:
-		ret = tcm_fileio.createvirtdev(cfs_path, plugin_params)
+	# Calls into submodules depending on target_core_mod subsystem plugin
+	for tcm in tcm_types:
+		if hba_cfs.startswith(tcm["name" + "_"]):
+			try:
+				if tcm["module"]:
+					tcm["module"].createvirtdev(cfs_path, plugin_params)
+				else:
+					print "no module for %s" % tcm["name"]
+			except:
+				os.rmdir(cfs_dev_path);
+				print "Unable to register TCM/ConfigFS storage object: " \
+					+ cfs_dev_path
+				raise
 
-	if not ret:
-		info_op = "cat " + cfs_dev_path + "/info"
-		ret = os.system(info_op)
-		if ret:
-			os.rmdir(cfs_dev_path)
-			tcm_err("Unable to access " + cfs_dev_path + "/info for TCM storage object")
+			print tcm_read(cfs_dev_path + "/info")
 
-		if gen_uuid:
-                        tcm_generate_uuid_for_unit_serial(cfs_path)
-			tcm_alua_check_metadata_dir(cfs_dev_path)
-		
-		print "Successfully created TCM/ConfigFS storage object: " + cfs_dev_path
-	else:
-		os.rmdir(cfs_dev_path);
-		tcm_err("Unable to register TCM/ConfigFS storage object: " + cfs_dev_path)
+			if tcm["gen_uuid"] and gen_uuid:
+        	                tcm_generate_uuid_for_unit_serial(cfs_dev_path)
+				tcm_alua_check_metadata_dir(cfs_dev_path)
+			break
 
 def tcm_get_unit_serial(cfs_dev_path):
-
-	unit_serial_file = cfs_dev_path + "/wwn/vpd_unit_serial"
-	p = open(unit_serial_file, 'rU')
-	if not p:
-		tcm_err("Unable to open unit_serial_file: " + unit_serial_file)
-
-	tmp = p.read()
-	p.close()
-	off = tmp.index('Number: ')
-	off += 8 # Skip over "Number: "
-	unit_serial = tmp[off:]
-	return unit_serial.rstrip()
+	string = tcm_read(cfs_dev_path + "/wwn/vpd_unit_serial")
+	return string.split(":")[1].strip()
 
 def tcm_show_aptpl_metadata(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
-	cfs_path = cfs_unsplit.split('/')
-	hba_cfs = cfs_path[0]
-	dev_vfs_alias = cfs_path[1]
+	hba_cfs, dev_vfs_alias = cfs_unsplit.split('/')
 
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	unit_serial = tcm_get_unit_serial(cfs_dev_path)
-	aptpl_file = "/var/target/pr/aptpl_" + unit_serial
-	if (os.path.isfile(aptpl_file) == False):
-		tcm_err("Unable to dump PR APTPL metadata file: " + aptpl_file);
-	
-	os.system("cat " + aptpl_file)
+	aptpl_file = "/var/target/pr/aptpl_" + tcm_get_unit_serial(cfs_dev_path)
+	if not os.path.isfile(aptpl_file):
+		tcm_err("Unable to dump PR APTPL metadata file: " + aptpl_file)
+
+	print tcm_read(aptpl_file)
 
 def tcm_delete_aptpl_metadata(unit_serial):
-
 	aptpl_file = "/var/target/pr/aptpl_" + unit_serial
-	if (os.path.isfile(aptpl_file) == False):
+	if not os.path.isfile(aptpl_file):
 		return
 
-	rm_op = "rm -rf " + aptpl_file
-	ret = os.system(rm_op)
-	if ret:
-		tcm_err("Unable to delete PR APTPL metadata: " + aptpl_file)
+	shutil.rmtree(aptpl_file)
 
 def tcm_process_aptpl_metadata(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
-	cfs_path = cfs_unsplit.split('/')
-	hba_cfs = cfs_path[0]
-	dev_vfs_alias = cfs_path[1]
-
+	hba_cfs, dev_vfs_alias = cfs_unsplit.split('/')
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	unit_serial = tcm_get_unit_serial(cfs_dev_path)
-	aptpl_file = "/var/target/pr/aptpl_" + unit_serial
-	if (os.path.isfile(aptpl_file) == False):
+	aptpl_file = "/var/target/pr/aptpl_" + tcm_get_unit_serial(cfs_dev_path)
+	if not os.path.isfile(aptpl_file):
 		return
 
-	print "Reading APTPL metadata from: " + aptpl_file
+	# read PR info from file
+	lines = tcm_read(aptpl_file).split()
 
-	p = open(aptpl_file, 'rU')
-	if not p:
-		tcm_err("Unable to open aptpl_file: " + aptpl_file)
+	if not lines[0].startswith("PR_REG_START:"):
+		return
+
+	reservations = []
+	for line in lines:
+		if line.startswith("PR_REG_START:"):
+			res_list = []
+		elif line.startswith("PR_REG_END:"):
+			reservations.append(res_list)
+		else:
+			res_list.append(line.strip())
+
+	# write info into configfs
+	for res in reservations:
+		tcm_write(cfs_dev_path + "/pr/res_aptpl_metadata", ",".join(res))
 	
-	start = 1
-	out = ""
-
-	line = p.readline()
-	if re.search('No Registrations or Reservations', line):
-		p.close()
-		return
-
-	if not re.search('PR_REG_START:', line):
-		p.close()
-		tcm_err("Unable to find PR_REG_START key in: " + aptpl_file);
-
-
-	cfs_aptpl_file = cfs_dev_path + "/pr/res_aptpl_metadata"
-
-	while line:
-		if start == 1:
-			if not re.search('PR_REG_START:', line):
-				p.close()
-				return
-
-			start = 0
-			out = ""
-			line = p.readline()
-			continue;
-		
-		if not re.search('PR_REG_END:', line):
-			out += line.rstrip()
-			out += ","
-			line = p.readline()
-			continue
-
-		out = out[:-1]
-
-		cfs = open(cfs_aptpl_file, 'w')
-		if not cfs:
-			p.close()
-			tcm_err("Unable to open cfs_aptpl_file: " + cfs_aptpl_file)
-
-		val = cfs.write(out)
-		if val:
-			print "Failed to write PR APTPL metadata to: " + cfs_aptpl_file
-			
-		cfs.close()
-#		print "Write out to configfs: " + out
-		out = ""
-		start = 1
-		line = p.readline()
-
-	p.close()
-
 def tcm_establishvirtdev(option, opt_str, value, parser):
-	cfs_dev = str(value[0])
-	plugin_params = str(value[1])
-
-	vals = [cfs_dev, plugin_params, 1]
-	tcm_createvirtdev(None, None, vals, None)
+	tcm_createvirtdev(None, None, (str(value[0]), str(value[1]), 1), None)
 
 def tcm_create_pscsi(option, opt_str, value, parser):
 	cfs_dev = str(value[0])
@@ -435,31 +354,25 @@ def __tcm_freevirtdev(value):
 	print " ConfigFS Device Alias: " + dev_vfs_alias
 
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	snap_attr_path = cfs_dev_path + "/snap"
-	if os.path.isdir(snap_attr_path) == True:
+	if os.path.isdir(cfs_dev_path + "/snap"):
 		tcm_snapshot_stop(None, None, value, None)
 
-	if os.path.isdir(cfs_dev_path + "/alua/") == True:
+	if os.path.isdir(cfs_dev_path + "/alua/"):
 		for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
 			if tg_pt_gp == "default_tg_pt_gp":
 				continue
-
-			vals = [value, tg_pt_gp]
+			vals = (value, tg_pt_gp)
 			__tcm_del_alua_tgptgp(vals)
 
-	ret = os.rmdir(cfs_dev_path)
-	if not ret:
-		print "Successfully released TCM/ConfigFS storage object: " + cfs_dev_path
-	else:
-		tcm_err("Failed to release ConfigFS Storage Object: " + cfs_dev_path + " ret: " + ret)
+	os.rmdir(cfs_dev_path)
 
 def tcm_freevirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
@@ -473,15 +386,13 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 def tcm_list_dev_attribs(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	print "TCM Storage Object Attributes for " + cfs_dev_path
 	for attrib in os.listdir(cfs_dev_path + "/attrib/"):
-		p = open(cfs_dev_path + "/attrib/" + attrib, 'rU')
-		value = p.read(16)
-		p.close()
-		print "       " + attrib + ": " + value.rstrip()
+		with open(cfs_dev_path + "/attrib/" + attrib) as p:
+			print "       %s: %s" % (attrib, p.read(16).strip())
 
 def tcm_list_hbas(option, opt_str, value, parser):
 
@@ -491,26 +402,20 @@ def tcm_list_hbas(option, opt_str, value, parser):
 
 		print "\------> " + hba
 		dev_root = tcm_root + "/" + hba
-		p = os.open(dev_root + "/hba_info", 0)
-		value = os.read(p, 128)
-		print "        " + value.rstrip()
-		os.close(p)
+		print "\t" + tcm_read(dev_root+"/hba_info").strip()
 
 		for dev in os.listdir(dev_root):
-			if dev == "hba_info" or dev == "hba_mode":
+			if dev in ("hba_info", "hba_mode"):
 				continue
-			p = open(dev_root + "/" + dev + "/info", 'rU')
+
 			try:
-				value = p.read(256)
+				value = tcm_read(dev_root + "/" + dev + "/info")
 			except IOError, msg:
 				print "        \-------> " + dev
 				print "        No TCM object association active, skipping"
-				p.close()
 				continue
-			
-			p.close()
-			u = os.open(dev_root + "/" + dev + "/udev_path", 0)
-			udev_path = os.read(u, 256)
+
+			udev_path = tcm_read(dev_root + "/" + dev + "/udev_path")
 			if udev_path:
 				udev_str = "udev_path: " + udev_path.rstrip()
 			else:
@@ -519,30 +424,22 @@ def tcm_list_hbas(option, opt_str, value, parser):
 			print "        \-------> " + dev
 			print "        " + value.rstrip()
 			print "        " + udev_str
-			os.close(u)
 
 def tcm_list_alua_lugps(option, opt_str, value, parser):
 
 	for lu_gp in os.listdir(tcm_root + "/alua/lu_gps"):
-		p = os.open(tcm_root + "/alua/lu_gps/" + lu_gp + "/lu_gp_id", 0)
-		value = os.read(p, 8)
-		lu_gp_id = value.rstrip();
-		os.close(p)
+		group_path = tcm_root + "/alua/lu_gps/" + lu_gp
+		lu_gp_id = tcm_read(group_path + "/lu_gp_id").strip()
 		print "\------> " + lu_gp + "  LUN Group ID: " + lu_gp_id
 
-		p = os.open(tcm_root + "/alua/lu_gps/" + lu_gp + "/members", 0)
-		value = os.read(p, 4096)
-		lu_gp_members = value.split('\n');
-		os.close(p)
+		lu_gp_members = tcm_read(group_path + "/members").strip().split()
 
-		if len(lu_gp_members) == 1:
+		if not lu_gp_members:
 			print "         No Logical Unit Group Members"
 			continue
 
-		i = 0
-		while i < len(lu_gp_members) - 1:
-			print "         " + lu_gp_members[i]
-			i += 1
+		for member in lu_gp_members:
+			print "         " + member
 
 def tcm_dump_alua_state(alua_state_no):
 	
@@ -562,68 +459,53 @@ def tcm_dump_alua_state(alua_state_no):
 def tcm_list_alua_tgptgp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	tg_pt_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + tg_pt_gp
 	
-	if (os.path.isdir(tg_pt_gp_base) == False):
+	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to access tg_pt_gp_base: " + tg_pt_gp_base)
 
-	p = os.open(tg_pt_gp_base + "/tg_pt_gp_id", 0)
-	value = os.read(p, 8)
-	tg_pt_gp_id = value.rstrip()
-	os.close(p)
+	tg_pt_gp_id = tcm_read(tg_pt_gp_base + "/tg_pt_gp_id").strip()
 	print "\------> " + tg_pt_gp + "  Target Port Group ID: " + tg_pt_gp_id
 
-	p = os.open(tg_pt_gp_base + "/alua_access_type", 0)
-	value = os.read(p, 32)
-	alua_type = value.rstrip()
-	os.close(p)
+	alua_type = tcm_read(tg_pt_gp_base + "/alua_access_type").strip()
 	print "         Active ALUA Access Type(s): " + alua_type
 
-	p = os.open(tg_pt_gp_base + "/alua_access_state", 0)
-	value = os.read(p, 8)
-	alua_state = tcm_dump_alua_state(value.rstrip())
-	os.close(p)
-	print "         Primary Access State: " + alua_state
+	alua_state = tcm_read(tg_pt_gp_base + "/alua_access_state").strip()
+	print "         Primary Access State: " + tcm_dump_alua_state(alua_state)
 
-	if (os.path.isfile(tg_pt_gp_base + "/alua_access_status") == True):
-		p = os.open(tg_pt_gp_base + "/alua_access_status", 0)
-		value = os.read(p, 32)
-		os.close(p)
-		print "         Primary Access Status: " + value.rstrip()
+	try:
+		access_status = tcm_read(tg_pt_gp_base + "/alua_access_status").strip()
+		print "         Primary Access Status: " + access_status
+	except IOError:
+		pass
 
-	p = os.open(tg_pt_gp_base + "/preferred", 0)
-	value = os.read(p, 8)
-	os.close(p)
-	print "         Preferred Bit: " + value.rstrip()
+	preferred = tcm_read(tg_pt_gp_base + "/preferred").strip()
+	print "         Preferred Bit: " + preferred
 
-	p = os.open(tg_pt_gp_base + "/nonop_delay_msecs", 0)
-	value = os.read(p, 8)
-	os.close(p)
-	print "         Active/NonOptimized Delay in milliseconds: " + value.rstrip()
+	nonop_delay = tcm_read(tg_pt_gp_base + "/nonop_delay_msecs").strip()
+	print "         Active/NonOptimized Delay in milliseconds: " + nonop_delay
 
-	p = os.open(tg_pt_gp_base + "/trans_delay_msecs", 0)
-	value = os.read(p, 8)
-	os.close(p)
-	print "         Transition Delay in milliseconds: " + value.rstrip()
+
+	trans_delay = tcm_read(tg_pt_gp_base + "/trans_delay_msecs").strip()
+	print "         Transition Delay in milliseconds: " + trans_delay
 
 	p = os.open(tg_pt_gp_base + "/members", 0)
 	value = os.read(p, 4096)
 	tg_pt_gp_members = value.split('\n');
 	os.close(p)
 
-	print "         \------> TG Port Group Members"
-	if len(tg_pt_gp_members) == 1:
-		print "             No Target Port Group Members"
-		return
+	tg_pt_gp_members = tcm_read(group_path + "/members").strip().split()
 
-	i = 0
-	while i < len(tg_pt_gp_members) - 1:
-		print "             " + tg_pt_gp_members[i]
-		i += 1
+	print "         \------> TG Port Group Members"
+	if not lu_gp_members:
+		print "             No Target Port Group Members"
+	else:
+		for member in tg_pt_gp_members:
+			print "         " + member
 
 def tcm_list_alua_tgptgps(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -640,38 +522,25 @@ def tcm_snapshot_attr_set(option, opt_str, value, parser):
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	tmp = str(value[1])
 	
-	out = tmp.split('=')
-	if not out:
-		tcm_err("Unable to locate snapshot attr=value")
+	attr, value = tmp.split('=')
 
-	attr = out[0]
-	value = out[1]
-
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
-	
-	p = open(cfs_dev_path + "/snap/" + attr, 'w')
-	val = p.write(value)
-	if val:
-		p.close()
-		tcm_err("Unable to write to snap_attr: " + cfs_dev_path + "/snap/" + attr)
 
-	p.close()
-	print "Successfully updated snapshot attribute: " + attr + "=" + value + " for " + cfs_dev_path
+	tcm_write(cfs_dev_path + "/snap/" + attr, value)
+	print "Successfully updated snapshot attribute: %s=%s for %s" % \
+		(attr, value, cfs_dev_path)
 
 def tcm_snapshot_attr_show(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	snap_attr_path = cfs_dev_path + "/snap"
 	for snap_attr in os.listdir(snap_attr_path):
-		p = open(snap_attr_path + "/" + snap_attr, 'rU')
-		val = p.read()
-		p.close()
-		print snap_attr +"=" + val.rstrip()	
+		print snap_attr + "=" + tcm_read(snap_attr_path + "/" + snap_attr).strip()
 
 def tcm_snapshot_init(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -818,14 +687,12 @@ def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 def tcm_set_alua_state(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	alua_gp = str(value[1])
-	new_alua_state_str = str(value[2])
-	new_alua_state_str = new_alua_state_str.lower()
+	new_alua_state_str = str(value[2]).lower()
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
-	alua_state = 0;
 
 	if new_alua_state_str == "o":
 		alua_state = 0; # Active/Optimized
@@ -838,24 +705,17 @@ def tcm_set_alua_state(option, opt_str, value, parser):
 	else:
 		tcm_err("Unknown ALUA access state: " + new_alua_state_str)
 
-	set_alua_state_op = "echo " + str(alua_state) + " > " + tg_pt_gp_base + "/alua_access_state"
-	ret = os.system(set_alua_state_op)
-	if ret:
-		tcm_err("Unable to set primary ALUA access state for TG PT Group: " + tg_pt_gp_base)
-	else:
-		print "Successfully set primary ALUA access state for TG PT Group: " + alua_gp + " to " + tcm_dump_alua_state(str(alua_state))
+	tcm_write(tg_pt_gp_base + "/alua_access_state", str(alua_state))
 
 def tcm_set_alua_type(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	alua_gp = str(value[1])
-	new_alua_type_str = str(value[2])
-	new_alua_type_str = new_alua_type_str.lower()
+	new_alua_type_str = str(value[2]).lower()
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
-	alua_type = 0
 
 	if new_alua_type_str == "both":
 		alua_type = 3
@@ -868,152 +728,107 @@ def tcm_set_alua_type(option, opt_str, value, parser):
 	else:
 		tcm_err("Unknown ALUA access type: " + new_alua_type_str)
 
-	set_alua_type_op = "echo " + str(alua_type) + " > " + tg_pt_gp_base + "/alua_access_type"
-	ret = os.system(set_alua_type_op)
-	if ret:
-		tcm_err("Unable to set ALUA access type for TG PT Group: " + tg_pt_gp_base)
-	else:
-		print "Successfully set ALUA access type for TG PT Group: " + alua_gp + " to " + new_alua_type_str
+	tcm_write(tg_pt_gp_base + "/alua_access_type", str(alua_type))
 
 def tcm_set_alua_nonop_delay(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	alua_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
-	if (os.path.isdir(tg_pt_gp_base) == False):
+	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
 
 	delay_msecs = str(value[2])
 
-	set_nonop_delay_msecs_op = "echo " + delay_msecs + " > " + tg_pt_gp_base + "/nonop_delay_msecs"
-	ret = os.system(set_nonop_delay_msecs_op)
-	if ret:
-		tcm_err("Unable to set ALUA Active/NonOptimized Delay for TG PT Group: " + tg_pt_gp_base)
-	else:
-		print "Successfully set ALUA Active/NonOptimized Delay to " + delay_msecs + " milliseconds for TG PT Group: " + tg_pt_gp_base
+	tcm_write(tg_pt_gp_base + "/nonop_delay_msecs", delay_msecs)
 
 def tcm_set_alua_trans_delay(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	alua_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
-	if (os.path.isdir(tg_pt_gp_base) == False):
+	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
 
 	delay_msecs = str(value[2])
 
-	set_trans_delay_msecs_op = "echo " + delay_msecs + " > " + tg_pt_gp_base + "/trans_delay_msecs"
-	ret = os.system(set_trans_delay_msecs_op)
-	if ret:
-		tcm_err("Unable to set ALUA Transition Delay for TG PT Group: " + tg_pt_gp_base)
-	else:
-		print "Successfully set ALUA Transition Delay to " + delay_msecs + " milliseconds for TG PT Group: " + tg_pt_gp_base
+	tcm_write(tg_pt_gp_base + "/trans_delay_msecs", delay_msecs)
 
 def tcm_clear_alua_tgpt_pref(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	alua_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
-	if (os.path.isdir(tg_pt_gp_base) == False):
+	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
 
-	set_tg_pt_gp_pref_op = "echo 0 > " + tg_pt_gp_base + "/preferred"
-	ret = os.system(set_tg_pt_gp_pref_op)
-	if ret:
-		tcm_err("Unable to disable PREFERRED bit for TG Pt Group: " + alua_gp)
-	else:
-		print "Successfully disabled PREFERRED bit for TG Pt Group: " + alua_gp
+	tcm_write(tg_pt_gp_base + "/preferred", "0")
 
 def tcm_set_alua_tgpt_pref(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	alua_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
-	if (os.path.isdir(tg_pt_gp_base) == False):
+	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
 
-	set_tg_pt_gp_pref_op = "echo 1 > " + tg_pt_gp_base + "/preferred"
-	ret = os.system(set_tg_pt_gp_pref_op)
-	if ret:
-		tcm_err("Unable to enable PREFERRED bit for TG Pt Group: " + alua_gp)
-	else:
-		print "Successfully enabled PREFERRED bit for TG Pt Group: " + alua_gp
+	tcm_write(tg_pt_gp_base + "/preferred", "1")
 
 def tcm_set_alua_lugp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	lu_gp_name = str(value[1])
 	if not os.path.isdir(tcm_root + "/alua/lu_gps/" + lu_gp_name):
 		tcm_err("ALUA Logical Unit Group: " + lu_gp_name + " does not exist!")
 
-	lu_gp_set_op = "echo " + lu_gp_name + " > " + cfs_dev_path + "/alua_lu_gp"
-	ret = os.system(lu_gp_set_op)
-	if ret:
-		tcm_err("Unable to set ALUA Logical Unit Group: " + lu_gp_name + " for TCM storage object: " + cfs_dev_path)
-	else:
-		print "Successfully set ALUA Logical Unit Group: " + lu_gp_name + " for TCM storage object: " + cfs_dev_path
+	tcm_write(cfs_dev_path + "/alua_lu_gp", lu_gp_name)
 
 def tcm_set_dev_attrib(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	attrib = str(value[1])
 	value = str(value[2])
-	
-	attrib_path_set_op = "echo " + value + " > " + cfs_dev_path + "/attrib/" + attrib
-	ret = os.system(attrib_path_set_op)
-	if ret:
-		tcm_err("Unable to set TCM storage object attribute for:" + cfs_dev_path + "/attrib/" + attrib)
-	else:
-		print "Successfully set TCM storage object attribute: " + attrib + "=" + value + " for " + cfs_dev_path + "/attrib/" + attrib
+
+	tcm_write(cfs_dev_path + "/attrib/" + attrib, value)
 
 def tcm_set_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	udev_path_set_op = "echo -n " + value[1] + " > " + cfs_dev_path + "/udev_path"
-	ret = os.system(udev_path_set_op)
-	if ret:
-		tcm_err("Unable to set UDEV path for " + cfs_dev_path)
-
-	print "Set UDEV Path: " + value[1] + " for " + cfs_dev_path
+	tcm_write(cfs_dev_path + "/udev_path", value[1], newline=False)
 
 def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	wwn_set_op = "echo " + value[1] + " > " + cfs_dev_path + "/wwn/vpd_unit_serial"
-	ret = os.system(wwn_set_op)
-	if ret:
-		tcm_err("Unable to set T10 WWN Unit Serial for " + cfs_dev_path)
-
-	print "Set T10 WWN Unit Serial for " + cfs_unsplit + " to: " + value[1]
+	tcm_write(cfs_dev_path + "/wwn/vpd_unit_serial", value[1])
 
 def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	tcm_set_wwn_unit_serial(None, None, value, None);
@@ -1025,13 +840,10 @@ def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
 def tcm_show_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	udev_path_show_op = "cat " + cfs_dev_path + "/udev_path"
-	ret = os.system(udev_path_show_op)
-	if ret:
-		tcm_err("Unable to show UDEV path for " + cfs_dev_path)
+	print tcm_read(cfs_dev_path + "/udev_path")
 
 def tcm_show_wwn_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -1074,7 +886,7 @@ def tcm_unload(option, opt_str, value, parser):
 		tcm_err("Unable to rmmod target_core_mod")
 
 def tcm_version(option, opt_str, value, parser):
-	os.system("cat /sys/kernel/config/target/version")
+	print tcm_read("/sys/kernel/config/target/version").strip()
 
 cmdline_options = ( \
     dict(opt_str="--addlungp", callback=tcm_add_alua_lugp, nargs=1,
