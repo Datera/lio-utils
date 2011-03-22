@@ -28,7 +28,7 @@ def tcm_write(filename, value):
 	f.close()
 
 def tcm_get_cfs_prefix(arg):
-	return "/sys/kernel/config/target/core/" + arg
+	return tcm_root + "/" + arg
 
 def tcm_add_alua_lugp(option, opt_str, value, parser):
 	lu_gp_name = str(value)
