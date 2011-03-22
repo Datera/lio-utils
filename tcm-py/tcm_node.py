@@ -5,6 +5,7 @@ import string
 import re
 import errno
 import uuid
+import shutil
 from optparse import OptionParser
 
 import tcm_pscsi
@@ -188,11 +189,7 @@ def tcm_del_alua_tgptgp(option, opt_str, values, parser):
 	if os.path.isfile(alua_md_path) == False:
 		return
 
-	# TODO: find a better way to do this	
-	rm_op = "rm -rf " + alua_md_path
-	ret = os.system(rm_op)
-	if ret:
-		tcm_err("Unable to remove ALUA metadata from: " + alua_md_path)
+	shutil.rmtree(alua_md_path)
 
 def tcm_generate_uuid_for_unit_serial(cfs_dev_path):
 	# Generate random uuid
