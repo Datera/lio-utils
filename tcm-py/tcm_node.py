@@ -22,10 +22,13 @@ def tcm_err(msg):
 	print msg
 	sys.exit(1)
 
+def tcm_read(filename):
+	with open(tcm_root + "/" + filename) as f:
+		return f.read()
+
 def tcm_write(filename, value):
-	f = open(tcm_root + "/" + filename, "w")
-	f.write(value + "\n")
-	f.close()
+	with open(tcm_root + "/" + filename, "w") as f:
+		f.write(value + "\n")
 
 def tcm_get_cfs_prefix(arg):
 	return tcm_root + "/" + arg
