@@ -22,28 +22,25 @@ def tcm_err(msg):
 	print msg
 	sys.exit(1)
 
+def tcm_write(filename, value):
+	f = open(tcm_root + "/" + filename, "w")
+	f.write(value + "\n")
+	f.close()
+
 def tcm_get_cfs_prefix(arg):
 	return "/sys/kernel/config/target/core/" + arg
 
 def tcm_add_alua_lugp(option, opt_str, value, parser):
 	lu_gp_name = str(value)
 
-	if os.path.isdir(tcm_root + "/alua/lu_gps/" + lu_gp_name):
-		tcm_err("ALUA Logical Unit Group: " + lu_gp_name + " already exists!")
-	
-	mkdir_op = "mkdir -p " + tcm_root + "/alua/lu_gps/" + lu_gp_name
-	ret = os.system(mkdir_op)
-	if ret:
-		tcm_err("Unable to create ALUA Logical Unit Group: " + lu_gp_name)
+	os.makedirs(tcm_root + "/alua/lu_gps/" + lu_gp_name)
 
-	set_lu_gp_op = "echo 0 > " + tcm_root + "/alua/lu_gps/" + lu_gp_name + "/lu_gp_id"
-	ret = os.system(set_lu_gp_op)
-	if ret:
-		rmdir_op = "rmdir " + tcm_root + "/alua/lu_gps/" + lu_gp_name
-		test = os.system(rmdir_op)
-		tcm_err("Unable to set ID for ALUA Logical Unit Group: " + lu_gp_name)
-	else:
+	try:
+		tcm_write("alua/lu_gps/%s/lu_gp_id" % lu_gp_name, lu_gp_name)
 		print "Successfully created ALUA Logical Unit Group: " + lu_gp_name
+	except:
+		os.rmdir(tcm_root + "/alua/lu_gps/" + lu_gp_name)
+		raise
 
 def tcm_add_alua_tgptgp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
