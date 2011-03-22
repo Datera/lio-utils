@@ -4,6 +4,7 @@ import subprocess as sub
 import string
 import re
 import errno
+import uuid
 from optparse import OptionParser
 
 import tcm_pscsi
@@ -194,17 +195,9 @@ def tcm_del_alua_tgptgp(option, opt_str, values, parser):
 		tcm_err("Unable to remove ALUA metadata from: " + alua_md_path)
 
 def tcm_generate_uuid_for_unit_serial(cfs_dev_path):
-	uuidgen_op = 'uuidgen'
-	p = sub.Popen(uuidgen_op, shell=True, stdout=sub.PIPE).stdout
-	uuid = p.readline()
-	p.close()
-
-	if not uuid:
-		print "Unable to generate UUID using uuidgen, continuing anyway"
-		return
-
-	swus_val = [cfs_dev_path,uuid.rstrip()]
-	tcm_set_wwn_unit_serial(None, None, swus_val, None)
+	# Generate random uuid
+	uuid = str(uuid.uuid4())
+	tcm_set_wwn_unit_serial(None, None, (cfs_dev_path, uuid), None)
 
 def tcm_createvirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
