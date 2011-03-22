@@ -79,79 +79,39 @@ def tcm_alua_delete_metadata_dir(unit_serial):
 	os.rmdir(alua_path)
 
 def tcm_alua_set_write_metadata(alua_cfs_path):
-	alua_write_md_file = alua_cfs_path + "/alua_write_metadata"
-
-	p = open(alua_write_md_file, 'w')
-	if not p:
-		tcm_err("Unable to open: " + alua_write_md_file)
-	
-	ret = p.write("1")
-	if ret:
-		tcm_err("Unable to enable writeable ALUA metadata for " + alua_write_md_file)
-	
-	p.close()
+	tcm_write(alua_cfs_path + "/alua_write_metadata", "1")
 
 def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 	alua_cfs_path = cfs_dev_path + "/alua/" + tg_pt_gp_name
-	
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
 	alua_path = "/var/target/alua/tpgs_" + unit_serial + "/" + tg_pt_gp_name
-#	print "Using tg_pt_gp alua_path " + alua_path
 
-	if os.path.isfile(alua_path) == False:
+	if not os.path.isfile(alua_path):
 		# If not pre-existing ALUA metadata exists, go ahead and
 		# allow new ALUA state changes to create and update the
 		# struct file metadata
 		tcm_alua_set_write_metadata(alua_cfs_path)
 		return
 
-	p = open(alua_path, 'rU')
-	if not p:
-		print "Unable to process ALUA metadata for: " + alua_path
+	with open(alua_path, 'rU') as p:
+		d = dict()
+		for line in p.readlines():
+			name, value = line.split("=")
+			d[name.strip()] = value.strip()
 
-	line = p.readline()
-	while line:
-		buf = line.rstrip()
-		
-		if re.search('tg_pt_gp_id=', buf):
-			ex_tg_pt_gp_id = buf[12:]
-#			print "Extracted tg_pt_gp_id: " + ex_tg_pt_gp_id
+	if "tg_pt_gp_id" in d and int(d["tg_pt_gp_id"]) != int(tg_pt_gp_id):
+		raise IOError("Passed tg_pt_gp_id: %s does not match extracted: %s" % \
+			(tg_pt_gp_id, d["tg_pt_gp_id"]))
 
-			if int(ex_tg_pt_gp_id) != int(tg_pt_gp_id):
-				tcm_err("Passed tg_pt_gp_id: " + tg_pt_gp_id + " does not match extracted: " + ex_tg_pt_gp_id)
+	if "alua_access_state" in d:
+		tcm_write(alua_cfs_path + "/alua_access_state", d["alua_access_state"])
 
-		elif re.search('alua_access_state=', buf):
-			alua_access_state = buf[21:]
-#			print "Extracted alua_access_state: " + alua_access_state
-			cfs = open(alua_cfs_path + "/alua_access_state", 'w')
-			if not cfs:
-				tcm_err("Unable to open " + alua_cfs_path + "/alua_access_state")
-
-			ret = cfs.write(alua_access_state)
-			if ret:
-				tcm_err("Unable to set: " + alua_cfs_path + "/alua_access_state")
-
-			cfs.close()
-
-		elif re.search('alua_access_status=', buf):
-			alua_access_status = buf[22:]
-#			print "Extracted alua_access_status " + alua_access_status
-			cfs = open(alua_cfs_path + "/alua_access_status", 'w')
-			if not cfs:
-				tcm_err("Unable to open " + alua_cfs_path + "/alua_access_status")
-	
-			ret = cfs.write(alua_access_status)
-			if ret:
-				tcm_err("Unable to set: " + alua_cfs_path + "/alua_access_status")
-
-			cfs.close()
-
-		line = p.readline()
+	if "alua_access_status" in d:
+		tcm_write(alua_cfs_path + "/alua_access_status", d["alua_access_status"])
 
 	# Now allow changes to ALUA target port group update the struct file metadata
 	# in /var/target/alua/tpgs_$T10_UNIT_SERIAL/$TG_PT_GP_NAME
 	tcm_alua_set_write_metadata(alua_cfs_path)
-	p.close()
 
 def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -168,22 +128,13 @@ def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
 		tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id)
 		return
 
-	if os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
-		tcm_err("ALUA Target Port Group: " + tg_pt_gp_name + " already exists!")
+	os.makedirs(cfs_dev_path + "/alua/" + tg_pt_gp_name)
 
-	mkdir_op = "mkdir -p " + cfs_dev_path + "/alua/" + tg_pt_gp_name
-	ret = os.system(mkdir_op)
-	if ret:
-		tcm_err("Unable to add existing ALUA Target Port Group: " + tg_pt_gp_name)
-
-	set_tg_pt_gp_op = "echo " + tg_pt_gp_id + " > " + cfs_dev_path + "/alua/" + tg_pt_gp_name + "/tg_pt_gp_id"
-	ret = os.system(set_tg_pt_gp_op)
-	if ret:
-		rmdir_op = "rmdir " + cfs_dev_path + "/alua/" + tg_pt_gp_name
-		os.system(rmdir_op)
-		tcm_err("Unable to set ID for ALUA Target Port Group: " + tg_pt_gp_name)
-	else:
-		print "Successfully added existing ALUA Target Port Group: " + tg_pt_gp_name + " with tg_pt_gp_id: " + tg_pt_gp_id
+	try:
+		tcm_write(cfs_dev_path + "/alua/" + tg_pt_gp_name + "/tg_pt_gp_id",  tg_pt_gp_id)
+	except:
+		os.rmdir(cfs_dev_path + "/alua/" + tg_pt_gp_name)
+		raise
 
 	# Now process the ALUA metadata for this group
 	tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id)
@@ -192,21 +143,15 @@ def tcm_delhba(option, opt_str, value, parser):
 	hba_name = str(value)
 
 	hba_path = tcm_root + "/" + hba_name
-	print "hba_path: " + hba_path
 
-	dev_root = tcm_root + "/" + hba_name + "/"
-	for g in os.listdir(dev_root):
+	for g in os.listdir(hba_path + "/"):
 		if g == "hba_info" or g == "hba_mode":
-			continue;
+			continue
 
-		tmp_str = hba_name + "/"+ g
+		tmp_str = hba_name + "/" + g
 		__tcm_freevirtdev(None, None, tmp_str, None)
 
-	ret = os.rmdir(hba_path)
-	if ret:
-		tcm_err("Unable to delete TCM HBA: " + hba_path)
-	else:
-		print "Successfully released TCM HBA: " + hba_path
+	os.rmdir(hba_path)
 
 def tcm_del_alua_lugp(option, opt_str, value, parser):
 	lu_gp_name = str(value)
@@ -214,45 +159,36 @@ def tcm_del_alua_lugp(option, opt_str, value, parser):
 	if not os.path.isdir(tcm_root + "/alua/lu_gps/" + lu_gp_name):
 		tcm_err("ALUA Logical Unit Group: " + lu_gp_name + " does not exist!")
 
-	rmdir_op = "rmdir "  + tcm_root + "/alua/lu_gps/" + lu_gp_name
-	ret = os.system(rmdir_op)
-	if ret:
-		tcm_err("Unable to delete ALUA Logical Unit Group: " + lu_gp_name)
-	else:
-		print "Successfully deleted ALUA Logical Unit Group: " + lu_gp_name
+	os.rmdir(tcm_root + "/alua/lu_gps/" + lu_gp_name)
 
-def __tcm_del_alua_tgptgp(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def __tcm_del_alua_tgptgp(values):
+	cfs_unsplit = str(values[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	tg_pt_gp_name = str(value[1])
+	tg_pt_gp_name = str(values[1])
 	if not os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
 		tcm_err("ALUA Target Port Group: " + tg_pt_gp_name + " does not exist!")
 
-	rmdir_op = "rmdir " + cfs_dev_path + "/alua/" + tg_pt_gp_name
-	ret = os.system(rmdir_op)
-	if ret:
-		tcm_err("Unable to delete ALUA Target Port Group: " + tg_pt_gp_name)
-	else:
-		print "Successfully deleted ALUA Target Port Group: " + tg_pt_gp_name
+	os.rmdir(cfs_dev_path + "/alua/" + tg_pt_gp_name)
 
-def tcm_del_alua_tgptgp(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_del_alua_tgptgp(option, opt_str, values, parser):
+	cfs_unsplit = str(values[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 	if (os.path.isdir(cfs_dev_path) == False):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
-	tg_pt_gp_name = str(value[1])
+	tg_pt_gp_name = str(values[1])
 	alua_md_path = "/var/target/alua/tpgs_" + unit_serial + "/" + tg_pt_gp_name
 
-	__tcm_del_alua_tgptgp(option, opt_str, value, parser)
+	__tcm_del_alua_tgptgp(values)
 
 	if os.path.isfile(alua_md_path) == False:
 		return
-	
+
+	# TODO: find a better way to do this	
 	rm_op = "rm -rf " + alua_md_path
 	ret = os.system(rm_op)
 	if ret:
@@ -523,7 +459,7 @@ def __tcm_freevirtdev(option, opt_str, value, parser):
 				continue
 
 			vals = [value, tg_pt_gp]
-			__tcm_del_alua_tgptgp(None, None, vals, None)
+			__tcm_del_alua_tgptgp(vals)
 
 	ret = os.rmdir(cfs_dev_path)
 	if not ret:
