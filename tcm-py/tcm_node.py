@@ -25,7 +25,7 @@ def tcm_err(msg):
 	sys.exit(1)
 
 def tcm_read(filename):
-	with open(tcm_root + "/" + filename) as f:
+	with open(filename) as f:
 		return f.read()
 
 def tcm_write(filename, value):
