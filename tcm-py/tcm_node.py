@@ -42,45 +42,30 @@ def tcm_add_alua_lugp(option, opt_str, value, parser):
 		raise
 
 def tcm_add_alua_tgptgp(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
+	cfs_dev_path = tcm_get_cfs_prefix(str(value[0]))
+	tg_pt_gp_name = str(value[1]) + "/"
+	alua_cfs_path = cfs_dev_path + "alua/" + tg_pt_gp_name
+
+	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	tg_pt_gp_name = str(value[1])
-	alua_cfs_path = cfs_dev_path + "/alua/" + tg_pt_gp_name
+	os.makedirs(alua_cfs_path)
 
-	if os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
-		tcm_err("ALUA Target Port Group: " + tg_pt_gp_name + " already exists!")
-
-	mkdir_op = "mkdir -p " + cfs_dev_path + "/alua/" + tg_pt_gp_name
-	ret = os.system(mkdir_op)
-	if ret:
-		tcm_err("Unable to create ALUA Target Port Group: " + tg_pt_gp_name)
-
-	set_tg_pt_gp_op = "echo 0 > " + cfs_dev_path + "/alua/" + tg_pt_gp_name + "/tg_pt_gp_id"
-	ret = os.system(set_tg_pt_gp_op)
-	if ret:
-		rmdir_op = "rmdir " + cfs_dev_path + "/alua/" + tg_pt_gp_name
-		os.system(rmdir_op)
-		tcm_err("Unable to set ID for ALUA Target Port Group: " + tg_pt_gp_name)
-	else:
-		tcm_alua_set_write_metadata(alua_cfs_path)
-		print "Successfully created ALUA Target Port Group: " + tg_pt_gp_name
+	try:
+		tcm_write(alua_cfs_path + "tg_pt_gp_id", "0")
+	except:
+		os.rmdir(alua_cfs_path)
+		raise
 
 def tcm_alua_check_metadata_dir(cfs_dev_path):
 
-	unit_serial = tcm_get_unit_serial(cfs_dev_path)
-	alua_path = "/var/target/alua/tpgs_" + unit_serial + "/"
-	if os.path.isdir(alua_path) == True:
+	alua_path = "/var/target/alua/tpgs_" + tcm_get_unit_serial(cfs_dev_path) + "/"
+	if os.path.isdir(alua_path):
 		return
 
 	# Create the ALUA metadata directory for the passed storage object
 	# if it does not already exist.
-	mkdir_op = "mkdir -p " + alua_path
-	ret = os.system(mkdir_op)
-	if ret:
-		tcm_err("Unable to create ALUA metadata directory: " + alua_path)
+        os.makedirs(alua_path)
 
 def tcm_alua_delete_metadata_dir(unit_serial):
 
@@ -88,10 +73,7 @@ def tcm_alua_delete_metadata_dir(unit_serial):
 	if os.path.isdir(alua_path) == False:
 		return
 
-	rm_op = "rm -rf " + alua_path
-	ret = os.system(rm_op)
-	if ret:
-		tcm_err("Unable to remove ALUA metadata directory: " + alua_path)
+	os.rmdir(alua_path)
 
 def tcm_alua_set_write_metadata(alua_cfs_path):
 	alua_write_md_file = alua_cfs_path + "/alua_write_metadata"
