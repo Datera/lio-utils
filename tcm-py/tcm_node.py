@@ -37,7 +37,6 @@ def tcm_add_alua_lugp(option, opt_str, value, parser):
 
 	try:
 		tcm_write("alua/lu_gps/%s/lu_gp_id" % lu_gp_name, lu_gp_name)
-		print "Successfully created ALUA Logical Unit Group: " + lu_gp_name
 	except:
 		os.rmdir(tcm_root + "/alua/lu_gps/" + lu_gp_name)
 		raise
