@@ -29,7 +29,7 @@ def tcm_read(filename):
 		return f.read()
 
 def tcm_write(filename, value):
-	with open(tcm_root + "/" + filename, "w") as f:
+	with open(filename, "w") as f:
 		f.write(value + "\n")
 
 def tcm_get_cfs_prefix(arg):
@@ -41,7 +41,7 @@ def tcm_add_alua_lugp(option, opt_str, value, parser):
 	os.makedirs(tcm_root + "/alua/lu_gps/" + lu_gp_name)
 
 	try:
-		tcm_write("alua/lu_gps/%s/lu_gp_id" % lu_gp_name, lu_gp_name)
+		tcm_write(tcm_root + "/alua/lu_gps/%s/lu_gp_id" % lu_gp_name, lu_gp_name)
 	except:
 		os.rmdir(tcm_root + "/alua/lu_gps/" + lu_gp_name)
 		raise
