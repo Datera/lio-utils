@@ -34,6 +34,10 @@ def tcm_write(filename, value, newline=True):
 def tcm_get_cfs_prefix(arg):
 	return tcm_root + "/" + arg
 
+def tcm_check_dev_exists(cfs_dev_path):
+	if not os.path.isdir(cfs_dev_path):
+		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
 def tcm_add_alua_lugp(option, opt_str, value, parser):
 	lu_gp_name = str(value)
 
@@ -50,8 +54,7 @@ def tcm_add_alua_tgptgp(option, opt_str, value, parser):
 	tg_pt_gp_name = str(value[1]) + "/"
 	alua_cfs_path = cfs_dev_path + "alua/" + tg_pt_gp_name
 
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	tcm_check_dev_exists(cfs_dev_path)
 
 	os.makedirs(alua_cfs_path)
 
@@ -114,8 +117,8 @@ def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	tg_pt_gp_name = str(value[1])
 	tg_pt_gp_id = str(value[2])
@@ -161,8 +164,8 @@ def tcm_del_alua_lugp(option, opt_str, value, parser):
 def __tcm_del_alua_tgptgp(values):
 	cfs_unsplit = str(values[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	tg_pt_gp_name = str(values[1])
 	if not os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
@@ -173,8 +176,8 @@ def __tcm_del_alua_tgptgp(values):
 def tcm_del_alua_tgptgp(option, opt_str, values, parser):
 	cfs_unsplit = str(values[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
 	tg_pt_gp_name = str(values[1])
@@ -252,10 +255,9 @@ def tcm_get_unit_serial(cfs_dev_path):
 def tcm_show_aptpl_metadata(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	hba_cfs, dev_vfs_alias = cfs_unsplit.split('/')
-
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	aptpl_file = "/var/target/pr/aptpl_" + tcm_get_unit_serial(cfs_dev_path)
 	if not os.path.isfile(aptpl_file):
@@ -275,8 +277,7 @@ def tcm_process_aptpl_metadata(option, opt_str, value, parser):
 	hba_cfs, dev_vfs_alias = cfs_unsplit.split('/')
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	tcm_check_dev_exists(cfs_dev_path)
 
 	aptpl_file = "/var/target/pr/aptpl_" + tcm_get_unit_serial(cfs_dev_path)
 	if not os.path.isfile(aptpl_file):
@@ -348,8 +349,8 @@ def __tcm_freevirtdev(value):
 	print " ConfigFS Device Alias: " + dev_vfs_alias
 
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	if os.path.isdir(cfs_dev_path + "/snap"):
 		tcm_snapshot_stop(None, None, value, None)
@@ -366,8 +367,8 @@ def __tcm_freevirtdev(value):
 def tcm_freevirtdev(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
 
@@ -380,8 +381,8 @@ def tcm_freevirtdev(option, opt_str, value, parser):
 def tcm_list_dev_attribs(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	print "TCM Storage Object Attributes for " + cfs_dev_path
 	for attrib in os.listdir(cfs_dev_path + "/attrib/"):
@@ -453,8 +454,8 @@ def tcm_dump_alua_state(alua_state_no):
 def tcm_list_alua_tgptgp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	tg_pt_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + tg_pt_gp
@@ -504,8 +505,8 @@ def tcm_list_alua_tgptgp(option, opt_str, value, parser):
 def tcm_list_alua_tgptgps(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
 		vals = [str(value), tg_pt_gp]
@@ -518,8 +519,7 @@ def tcm_snapshot_attr_set(option, opt_str, value, parser):
 	
 	attr, value = tmp.split('=')
 
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	tcm_check_dev_exists(cfs_dev_path)
 
 	tcm_write(cfs_dev_path + "/snap/" + attr, value)
 	print "Successfully updated snapshot attribute: %s=%s for %s" % \
@@ -529,8 +529,7 @@ def tcm_snapshot_attr_show(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	tcm_check_dev_exists(cfs_dev_path)
 
 	snap_attr_path = cfs_dev_path + "/snap"
 	for snap_attr in os.listdir(snap_attr_path):
@@ -540,8 +539,7 @@ def tcm_snapshot_init(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	tcm_check_dev_exists(cfs_dev_path)
 
 	max_snapshots = int(value[1])
 	lv_size = str(value[2])
@@ -555,8 +553,7 @@ def tcm_snapshot_start(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	tcm_check_dev_exists(cfs_dev_path)
 
 	ret = tcm_snap.get_cfs_snap_enabled(cfs_dev_path)
 	if ret:
@@ -596,8 +593,7 @@ def tcm_snapshot_status(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	tcm_check_dev_exists(cfs_dev_path)
 
 	udev_path = tcm_snap.get_cfs_udev_path(cfs_dev_path)
 	if not udev_path:
@@ -619,8 +615,7 @@ def tcm_snapshot_stop(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+	tcm_check_dev_exists(cfs_dev_path)
 
 	enabled_attr = cfs_dev_path + "/snap/enabled"
 	p = open(enabled_attr, 'rU')
@@ -670,8 +665,8 @@ def tcm_snapshot_stop(option, opt_str, value, parser):
 def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	for f in os.listdir(cfs_dev_path + "/pr/"):
 		info = tcm_read(cfs_dev_path + "/pr/" + f).strip()
@@ -681,8 +676,8 @@ def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 def tcm_set_alua_state(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	alua_gp = str(value[1])
 	new_alua_state_str = str(value[2]).lower()
@@ -704,8 +699,8 @@ def tcm_set_alua_state(option, opt_str, value, parser):
 def tcm_set_alua_type(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	alua_gp = str(value[1])
 	new_alua_type_str = str(value[2]).lower()
@@ -727,8 +722,8 @@ def tcm_set_alua_type(option, opt_str, value, parser):
 def tcm_set_alua_nonop_delay(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	alua_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
@@ -742,8 +737,8 @@ def tcm_set_alua_nonop_delay(option, opt_str, value, parser):
 def tcm_set_alua_trans_delay(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	alua_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
@@ -757,8 +752,8 @@ def tcm_set_alua_trans_delay(option, opt_str, value, parser):
 def tcm_clear_alua_tgpt_pref(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	alua_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
@@ -770,8 +765,8 @@ def tcm_clear_alua_tgpt_pref(option, opt_str, value, parser):
 def tcm_set_alua_tgpt_pref(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	alua_gp = str(value[1])
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
@@ -783,8 +778,8 @@ def tcm_set_alua_tgpt_pref(option, opt_str, value, parser):
 def tcm_set_alua_lugp(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	lu_gp_name = str(value[1])
 	if not os.path.isdir(tcm_root + "/alua/lu_gps/" + lu_gp_name):
@@ -795,8 +790,8 @@ def tcm_set_alua_lugp(option, opt_str, value, parser):
 def tcm_set_dev_attrib(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	attrib = str(value[1])
 	value = str(value[2])
@@ -806,24 +801,24 @@ def tcm_set_dev_attrib(option, opt_str, value, parser):
 def tcm_set_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	tcm_write(cfs_dev_path + "/udev_path", value[1], newline=False)
 
 def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	tcm_write(cfs_dev_path + "/wwn/vpd_unit_serial", value[1])
 
 def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	tcm_set_wwn_unit_serial(None, None, value, None);
 	# Process PR APTPL metadata
@@ -834,16 +829,16 @@ def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
 def tcm_show_udev_path(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if not os.path.isdir(cfs_dev_path):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	print tcm_read(cfs_dev_path + "/udev_path")
 
 def tcm_show_wwn_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	if (os.path.isdir(cfs_dev_path) == False):
-		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
+
+	tcm_check_dev_exists(cfs_dev_path)
 
 	for f in os.listdir(cfs_dev_path + "/wwn/"):
 		info = tcm_read(cfs_dev_path + "/wwn/" + f).strip()
