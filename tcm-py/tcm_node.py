@@ -17,9 +17,6 @@ import tcm_snap
 
 tcm_root = "/sys/kernel/config/target/core"
 
-def tcm_cat(fname):
-    return file(fname).xreadlines()
-
 def tcm_err(msg):
 	print msg
 	sys.exit(1)
