@@ -18,7 +18,7 @@ import tcm_snap
 tcm_root = "/sys/kernel/config/target/core"
 
 def tcm_err(msg):
-	print msg
+	print >> sys.stderr, msg
 	sys.exit(1)
 
 def tcm_read(filename):
