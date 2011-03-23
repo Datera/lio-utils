@@ -679,10 +679,10 @@ def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 	if (os.path.isdir(cfs_dev_path) == False):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	pr_show_op = "cat " + cfs_dev_path + "/pr/*"
-	ret = os.system(pr_show_op)
-	if ret:
-		tcm_err("Unable to disable storage object persistent reservation info")
+	for f in os.listdir(cfs_dev_path + "/pr/"):
+		info = tcm_read(cfs_dev_path + "/pr/" + f).strip()
+		if info:
+			print info
 
 def tcm_set_alua_state(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
@@ -851,10 +851,10 @@ def tcm_show_wwn_info(option, opt_str, value, parser):
 	if (os.path.isdir(cfs_dev_path) == False):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-	wwn_show_op = "cat " + cfs_dev_path + "/wwn/*"
-	ret = os.system(wwn_show_op)
-	if ret:
-		tcm_err("Unable to disable storage object WWN info")
+	for f in os.listdir(cfs_dev_path + "/wwn/"):
+		info = tcm_read(cfs_dev_path + "/wwn/" + f).strip()
+		if info:
+			print info
 
 def tcm_unload(option, opt_str, value, parser):
 
