@@ -82,9 +82,6 @@ def tcm_alua_delete_metadata_dir(unit_serial):
 
 	os.rmdir(alua_path)
 
-def tcm_alua_set_write_metadata(alua_cfs_path):
-	tcm_write(alua_cfs_path + "/alua_write_metadata", "1")
-
 def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 	alua_cfs_path = cfs_dev_path + "/alua/" + tg_pt_gp_name
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
@@ -94,7 +91,7 @@ def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 		# If not pre-existing ALUA metadata exists, go ahead and
 		# allow new ALUA state changes to create and update the
 		# struct file metadata
-		tcm_alua_set_write_metadata(alua_cfs_path)
+		tcm_write(alua_cfs_path + "/alua_write_metadata", "1")
 		return
 
 	with open(alua_path, 'rU') as p:
@@ -115,7 +112,7 @@ def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 
 	# Now allow changes to ALUA target port group update the struct file metadata
 	# in /var/target/alua/tpgs_$T10_UNIT_SERIAL/$TG_PT_GP_NAME
-	tcm_alua_set_write_metadata(alua_cfs_path)
+	tcm_write(alua_cfs_path + "/alua_write_metadata", "1")
 
 def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
 	cfs_unsplit = str(value[0])
