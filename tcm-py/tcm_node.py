@@ -236,7 +236,7 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 				else:
 					print "no module for %s" % tcm["name"]
 			except:
-				os.rmdir(cfs_dev_path);
+				os.rmdir(cfs_dev_path)
 				print "Unable to register TCM/ConfigFS storage object: " \
 					+ cfs_dev_path
 				raise
@@ -556,15 +556,15 @@ def tcm_snapshot_start(option, opt_str, value, parser):
 
 	lv_group = tcm_snap.get_cfs_snap_lvgroup(cfs_dev_path)
 	if not lv_group:
-		tcm_err("lv_group for snapshot not set, please initialize configfs snapshot attrs with --lvsnapinit");
+		tcm_err("lv_group for snapshot not set, please initialize configfs snapshot attrs with --lvsnapinit")
 
 	snap_size = tcm_snap.get_cfs_snap_size(cfs_dev_path)
 	if not snap_size:
-		tcm_err("size for snapshot not set, please initialize configfs snapshot attrs with --lvsnapinit");
+		tcm_err("size for snapshot not set, please initialize configfs snapshot attrs with --lvsnapinit")
 
 	max_snapshots = tcm_snap.get_cfs_max_snapshots(cfs_dev_path)
 	if not max_snapshots:
-		tcm_err("max rotating snapshots value not set, please initialize configfs snapshot attrs with --lvsnapinit");
+		tcm_err("max rotating snapshots value not set, please initialize configfs snapshot attrs with --lvsnapinit")
 
 	ret = os.spawnlp(os.P_NOWAIT,"/usr/sbin/tcm_snap","tcm_snap","--p",cfs_dev_path)
 	if not ret:
@@ -679,7 +679,7 @@ def tcm_set_alua_state(option, opt_str, value, parser):
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
 
 	if new_alua_state_str == "o":
-		alua_state = 0; # Active/Optimized
+		alua_state = 0 # Active/Optimized
 	elif new_alua_state_str == "a":
 		alua_state = 1 # Active/NonOptimized
 	elif new_alua_state_str == "s":
@@ -815,7 +815,7 @@ def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	tcm_set_wwn_unit_serial(None, None, value, None);
+	tcm_set_wwn_unit_serial(None, None, value, None)
 	# Process PR APTPL metadata
 	tcm_process_aptpl_metadata(None, None, cfs_unsplit, None)
 	# Make sure the ALUA metadata directory exists for this storage object
@@ -849,7 +849,7 @@ def tcm_unload(option, opt_str, value, parser):
 
 	for f in hba_root:
 		if f == "alua":
-			continue;
+			continue
 
 		tcm_delhba(None, None, f, None)
 
