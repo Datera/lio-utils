@@ -488,11 +488,6 @@ def tcm_list_alua_tgptgp(option, opt_str, value, parser):
 	trans_delay = tcm_read(tg_pt_gp_base + "/trans_delay_msecs").strip()
 	print "         Transition Delay in milliseconds: " + trans_delay
 
-	p = os.open(tg_pt_gp_base + "/members", 0)
-	value = os.read(p, 4096)
-	tg_pt_gp_members = value.split('\n');
-	os.close(p)
-
 	tg_pt_gp_members = tcm_read(group_path + "/members").strip().split()
 
 	print "         \------> TG Port Group Members"
