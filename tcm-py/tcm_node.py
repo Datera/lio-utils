@@ -234,7 +234,7 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 				if tcm["module"]:
 					tcm["module"].createvirtdev(cfs_path, plugin_params)
 				else:
-					print "no module for %s" % tcm["name"]
+					tcm_err("no module for %s" % tcm["name"])
 			except:
 				os.rmdir(cfs_dev_path)
 				print "Unable to register TCM/ConfigFS storage object: " \
