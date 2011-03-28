@@ -869,8 +869,8 @@ def tcm_unload(option, opt_str, value, parser):
 	if ret:
 		tcm_err("Unable to rmmod target_core_mod")
 
-def tcm_version(option, opt_str, value, parser):
-	print tcm_read("/sys/kernel/config/target/version").strip()
+def tcm_version():
+	return tcm_read("/sys/kernel/config/target/version").strip()
 
 cmdline_options = ( \
     dict(opt_str="--addlungp", callback=tcm_add_alua_lugp, nargs=1,
@@ -985,15 +985,13 @@ cmdline_options = ( \
          dest="HBA/DEV", help="Show UDEV Path Information for TCM storage object"),
     dict(opt_str="--unload", callback=tcm_unload, nargs=0,
          help="Unload target_core_mod"),
-    dict(opt_str="--version", callback=tcm_version, nargs=0,
-         help="Display target_core_mod version information"),
     dict(opt_str="--wwn", callback=tcm_show_wwn_info, nargs=1,
          dest="HBA/DEV", help="Show WWN info"),
 )
 
 def main():
 
-    parser = OptionParser()
+    parser = OptionParser(version=tcm_version())
 
     for opt in cmdline_options:
         # cmd_aliases can be string or tuple of strings.
