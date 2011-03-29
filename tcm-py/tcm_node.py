@@ -13,8 +13,6 @@ import tcm_iblock
 import tcm_ramdisk
 import tcm_fileio
 
-import tcm_snap
-
 tcm_root = "/sys/kernel/config/target/core"
 
 def tcm_err(msg):
@@ -352,9 +350,6 @@ def __tcm_freevirtdev(value):
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	if os.path.isdir(cfs_dev_path + "/snap"):
-		tcm_snapshot_stop(None, None, value, None)
-
 	if os.path.isdir(cfs_dev_path + "/alua/"):
 		for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
 			if tg_pt_gp == "default_tg_pt_gp":
@@ -506,156 +501,6 @@ def tcm_list_alua_tgptgps(option, opt_str, value, parser):
 	for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
 		vals = [str(value), tg_pt_gp]
 		tcm_list_alua_tgptgp(None, None, vals, None)
-
-def tcm_snapshot_attr_set(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-	tmp = str(value[1])
-	
-	attr, value = tmp.split('=')
-
-	tcm_check_dev_exists(cfs_dev_path)
-
-	tcm_write(cfs_dev_path + "/snap/" + attr, value)
-	print "Successfully updated snapshot attribute: %s=%s for %s" % \
-		(attr, value, cfs_dev_path)
-
-def tcm_snapshot_attr_show(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-
-	tcm_check_dev_exists(cfs_dev_path)
-
-	snap_attr_path = cfs_dev_path + "/snap"
-	for snap_attr in os.listdir(snap_attr_path):
-		print snap_attr + "=" + tcm_read(snap_attr_path + "/" + snap_attr).strip()
-
-def tcm_snapshot_init(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-
-	tcm_check_dev_exists(cfs_dev_path)
-
-	max_snapshots = int(value[1])
-	lv_size = str(value[2])
-	snap_interval = str(value[3])
-
-	ret = tcm_snap.snap_set_cfs_defaults(cfs_dev_path, max_snapshots, lv_size, snap_interval)
-	if ret:
-		tcm_err("Unable to initialize snapshot attributes for " + cfs_dev_path)
-
-def tcm_snapshot_start(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-
-	tcm_check_dev_exists(cfs_dev_path)
-
-	ret = tcm_snap.get_cfs_snap_enabled(cfs_dev_path)
-	if ret:
-		tcm_err("Not starting snapshot daemon because it is already enabled")
-
-	lv_group = tcm_snap.get_cfs_snap_lvgroup(cfs_dev_path)
-	if not lv_group:
-		tcm_err("lv_group for snapshot not set, please initialize configfs snapshot attrs with --lvsnapinit")
-
-	snap_size = tcm_snap.get_cfs_snap_size(cfs_dev_path)
-	if not snap_size:
-		tcm_err("size for snapshot not set, please initialize configfs snapshot attrs with --lvsnapinit")
-
-	max_snapshots = tcm_snap.get_cfs_max_snapshots(cfs_dev_path)
-	if not max_snapshots:
-		tcm_err("max rotating snapshots value not set, please initialize configfs snapshot attrs with --lvsnapinit")
-
-	ret = os.spawnlp(os.P_NOWAIT,"/usr/sbin/tcm_snap","tcm_snap","--p",cfs_dev_path)
-	if not ret:
-		tcm_err("Unable to start tcm_snap for: " + cfs_dev_path)
-
-	print "Started tcm_snap daemon at pid: " + str(ret) + " for " + cfs_dev_path
-	
-	enabled_attr = cfs_dev_path + "/snap/enabled"
-	p = open(enabled_attr, 'w')
-	if not p:
-		tcm_err("Unable to open enabled_attr: " + enabled_attr)
-
-	val = p.write("1")
-	if val:
-		p.close()
-		tcm_err("Unable to set snap/enabled for " + cfs_dev_path)
-
-	p.close()
-
-def tcm_snapshot_status(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-
-	tcm_check_dev_exists(cfs_dev_path)
-
-	udev_path = tcm_snap.get_cfs_udev_path(cfs_dev_path)
-	if not udev_path:
-		tcm_err("Unable to locate udev path for LV snapshot")
-
-	val = udev_path.split('/')
-	if not val:
-		tcm_err("Unable to split udev_path")
-
-	# Assume that udev_path is in '/dev/$VG_GROUP/$LV_NAME' format
-	vg_group = val[2]
-#	print "vg_group: " + vg_group
-	lv_name = val[3]
-#	print "lv_name: " + lv_name
-	
-	tcm_snap.snap_dump_lvs_info(vg_group, lv_name)
-
-def tcm_snapshot_stop(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
-
-	tcm_check_dev_exists(cfs_dev_path)
-
-	enabled_attr = cfs_dev_path + "/snap/enabled"
-	p = open(enabled_attr, 'rU')
-	if not p:
-		tcm_err("Unable to open enabled_attr: " + enabled_attr)
-
-        val = p.read()
-        p.close()
-	if val.rstrip() == "0":
-		return
-
-	pid_attr = cfs_dev_path + "/snap/pid"
-	p = open(pid_attr, 'rU')
-	if not p:
-		tcm_err("Unable to open pid_attr: " + pid_attr)
-
-	val = p.read()
-	pid = int(val.rstrip())
-	p.close()
-#	print "Located tcm_snap pid: " + str(pid) + " for " + cfs_dev_path
-	try:
-		os.kill(pid, signal.SIGKILL)
-	except OSError, err:
-		return err.errno == errno.EPERM
-
-	print "Successfully stopped tcm_snap daemon for " + cfs_dev_path
-	p = open(pid_attr, 'w')
-	if not p:
-		tcm_err("Unable to open pid_attr: " + pid_attr)
-
-	val = p.write("0")
-	if val:
-		print "Unable to clear snap pid"
-	p.close()
-
-	enabled_attr = cfs_dev_path + "/snap/enabled"
-	p = open(enabled_attr, 'w')
-	if not p:
-		tcm_err("Unable to open enabled_attr: " + enabled_attr)
-		
-	val = p.write("0")
-	if val:
-		p.close()
-		tcm_err("Unable to set snap/enabled for " + cfs_dev_path)
-	p.close()
 
 def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 	cfs_unsplit = str(value)
@@ -921,21 +766,6 @@ cmdline_options = ( \
          help="List specific ALUA Target Port Group for Storage Object"),
     dict(opt_str=("--listtgptgps","--listaluatpgs"), callback=tcm_list_alua_tgptgps, nargs=1,
          dest="HBA/DEV", help="List all ALUA Target Port Groups for Storage Object"),
-    dict(opt_str="--lvsnapattrset", callback=tcm_snapshot_attr_set, nargs=2,
-         dest="HBA/DEV ATTR=VALUE",
-         help="Set LV snapshot configfs attributes for TCM/IBLOCK storage object"),
-    dict(opt_str="--lvsnapattrshow", callback=tcm_snapshot_attr_show, nargs=1,
-         dest="HBA/DEV",
-         help="Show LV snapshot configfs attributes for TCM/IBLOCK storage object"),
-    dict(opt_str="--lvsnapinit", callback=tcm_snapshot_init, nargs=4,
-         dest="HBA/DEV MAX_SNAPSHOTS SNAP_SIZE_STR SNAP_INTERVAL_STR",
-         help="Initialize snapshot with default attributes"),
-    dict(opt_str="--lvsnapstart", callback=tcm_snapshot_start, nargs=1,
-         dest="HBA/DEV", help="Enable snapshot daemon for TCM/IBLOCK LVM storage object"),
-    dict(opt_str="--lvsnapstat", callback=tcm_snapshot_status, nargs=1,
-         dest="HBA/DEV", help="Display LV snapshot status for TCM/IBLOCK LVM storage object"),
-    dict(opt_str="--lvsnapstop", callback=tcm_snapshot_stop, nargs=1,
-         dest="HBA/DEV", help="Disable snapshot daemon for TCM/IBLOCK LVM storage object"),
     dict(opt_str="--pr", callback=tcm_show_persistent_reserve_info, nargs=1,
          dest="HBA/DEV", help="Show Persistent Reservation info"),
     dict(opt_str="--praptpl", callback=tcm_process_aptpl_metadata, nargs=1,
