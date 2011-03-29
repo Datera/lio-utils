@@ -36,9 +36,7 @@ def tcm_check_dev_exists(cfs_dev_path):
 	if not os.path.isdir(cfs_dev_path):
 		tcm_err("TCM/ConfigFS storage object does not exist: " + cfs_dev_path)
 
-def tcm_add_alua_lugp(option, opt_str, value, parser):
-	lu_gp_name = str(value)
-
+def tcm_add_alua_lugp(lu_gp_name):
 	os.makedirs(tcm_root + "/alua/lu_gps/" + lu_gp_name)
 
 	try:
@@ -47,9 +45,9 @@ def tcm_add_alua_lugp(option, opt_str, value, parser):
 		os.rmdir(tcm_root + "/alua/lu_gps/" + lu_gp_name)
 		raise
 
-def tcm_add_alua_tgptgp(option, opt_str, value, parser):
-	cfs_dev_path = tcm_get_cfs_prefix(str(value[0]))
-	tg_pt_gp_name = str(value[1]) + "/"
+def tcm_add_alua_tgptgp(dev_path, gp_name):
+	cfs_dev_path = str(dev_path)
+	tg_pt_gp_name = str(gp_name) + "/"
 	alua_cfs_path = cfs_dev_path + "alua/" + tg_pt_gp_name
 
 	tcm_check_dev_exists(cfs_dev_path)
@@ -112,14 +110,13 @@ def tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id):
 	# in /var/target/alua/tpgs_$T10_UNIT_SERIAL/$TG_PT_GP_NAME
 	tcm_write(alua_cfs_path + "/alua_write_metadata", "1")
 
-def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+def tcm_add_alua_tgptgp_with_md(dev_path, gp_name, gp_id):
+	cfs_dev_path = tcm_get_cfs_prefix(str(dev_path))
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	tg_pt_gp_name = str(value[1])
-	tg_pt_gp_id = str(value[2])
+	tg_pt_gp_name = str(gp_name)
+	tg_pt_gp_id = str(gp_id)
 
 	# If the default_tg_pt_gp is passed, we skip the creation (as it already exists)
 	# and just process ALUA metadata
@@ -138,8 +135,8 @@ def tcm_add_alua_tgptgp_with_md(option, opt_str, value, parser):
 	# Now process the ALUA metadata for this group
 	tcm_alua_process_metadata(cfs_dev_path, tg_pt_gp_name, tg_pt_gp_id)
 
-def tcm_delhba(option, opt_str, value, parser):
-	hba_name = str(value)
+def tcm_delhba(hba_name):
+	hba_name = str(hba_name)
 
 	hba_path = tcm_root + "/" + hba_name
 
@@ -151,37 +148,36 @@ def tcm_delhba(option, opt_str, value, parser):
 
 	os.rmdir(hba_path)
 
-def tcm_del_alua_lugp(option, opt_str, value, parser):
-	lu_gp_name = str(value)
+def tcm_del_alua_lugp(lu_gp_name):
+	lu_gp_name = str(lu_gp_name)
 
 	if not os.path.isdir(tcm_root + "/alua/lu_gps/" + lu_gp_name):
 		tcm_err("ALUA Logical Unit Group: " + lu_gp_name + " does not exist!")
 
 	os.rmdir(tcm_root + "/alua/lu_gps/" + lu_gp_name)
 
-def __tcm_del_alua_tgptgp(values):
-	cfs_unsplit = str(values[0])
+def __tcm_del_alua_tgptgp(dev_path, gp_name):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	tg_pt_gp_name = str(values[1])
+	tg_pt_gp_name = str(gp_name)
 	if not os.path.isdir(cfs_dev_path + "/alua/" + tg_pt_gp_name):
 		tcm_err("ALUA Target Port Group: " + tg_pt_gp_name + " does not exist!")
 
 	os.rmdir(cfs_dev_path + "/alua/" + tg_pt_gp_name)
 
-def tcm_del_alua_tgptgp(option, opt_str, values, parser):
-	cfs_unsplit = str(values[0])
-	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
+def tcm_del_alua_tgptgp(dev_path, gp_name):
+	cfs_dev_path = tcm_get_cfs_prefix(str(dev_path))
 
 	tcm_check_dev_exists(cfs_dev_path)
 
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
-	tg_pt_gp_name = str(values[1])
+	tg_pt_gp_name = str(gp_name)
 	alua_md_path = "/var/target/alua/tpgs_" + unit_serial + "/" + tg_pt_gp_name
 
-	__tcm_del_alua_tgptgp(values)
+	__tcm_del_alua_tgptgp(dev_path, tg_pt_gp_name)
 
 	if os.path.isfile(alua_md_path) == False:
 		return
@@ -202,9 +198,9 @@ tcm_types = ( \
     dict(name="fileio", module=tcm_fileio, gen_uuid=True),
 )
 
-def tcm_createvirtdev(option, opt_str, value, parser):
-	hba_cfs, dev_vfs_alias = value[0].split('/')
-	plugin_params = value[1].split(' ')
+def tcm_createvirtdev(dev_path, plugin_params, establishdev=False):
+	hba_cfs, dev_vfs_alias = dev_path.split('/')
+	plugin_params = plugin_params.split(' ')
 	print "Device Params " + str(plugin_params)
 
 	# create hba if it doesn't exist
@@ -222,7 +218,7 @@ def tcm_createvirtdev(option, opt_str, value, parser):
 	# Determine if --establishdev is being called and we want to skip
 	# the T10 Unit Serial Number generation
 	gen_uuid = True
-	if len(value) > 2 and str(value[2]) == "1":
+	if establishdev:
 		gen_uuid = False
 
 	# Calls into submodules depending on target_core_mod subsystem plugin
@@ -250,8 +246,8 @@ def tcm_get_unit_serial(cfs_dev_path):
 	string = tcm_read(cfs_dev_path + "/wwn/vpd_unit_serial")
 	return string.split(":")[1].strip()
 
-def tcm_show_aptpl_metadata(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
+def tcm_show_aptpl_metadata(dev_path):
+	cfs_unsplit = str(dev_path)
 	hba_cfs, dev_vfs_alias = cfs_unsplit.split('/')
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
@@ -270,8 +266,8 @@ def tcm_delete_aptpl_metadata(unit_serial):
 
 	shutil.rmtree(aptpl_file)
 
-def tcm_process_aptpl_metadata(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
+def tcm_process_aptpl_metadata(dev_path):
+	cfs_unsplit = str(dev_path)
 	hba_cfs, dev_vfs_alias = cfs_unsplit.split('/')
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
@@ -300,49 +296,44 @@ def tcm_process_aptpl_metadata(option, opt_str, value, parser):
 	for res in reservations:
 		tcm_write(cfs_dev_path + "/pr/res_aptpl_metadata", ",".join(res))
 	
-def tcm_establishvirtdev(option, opt_str, value, parser):
-	tcm_createvirtdev(None, None, (str(value[0]), str(value[1]), 1), None)
+def tcm_establishvirtdev(dev_path, plugin_params):
+	tcm_createvirtdev(dev_path, plugin_params, True)
 
-def tcm_create_pscsi(option, opt_str, value, parser):
-	cfs_dev = str(value[0])
-	ctl = str(value[1])
+def tcm_create_pscsi(cfs_dev, ctl):
+	cfs_dev = str(cfs_dev)
+	ctl = str(ctl)
 
 	ctl_params = ctl.split(':')
 
-	pscsi_params = "scsi_channel_id=" + ctl_params[0] + ",scsi_target_id=" + ctl_params[1] + ",scsi_lun_id=" + ctl_params[2]
-	vals = [cfs_dev, pscsi_params]
-	tcm_createvirtdev(None, None, vals, None)
+	pscsi_params = "scsi_channel_id=" + ctl_params[0] + ",scsi_target_id=" \
+	    + ctl_params[1] + ",scsi_lun_id=" + ctl_params[2]
+	tcm_createvirtdev(cfs_dev, pscsi_params)
 
-def tcm_create_pscsibyudev(option, opt_str, value, parser):
-	cfs_dev = str(value[0])
-	tmp_params = str(value[1])
+def tcm_create_pscsibyudev(dev_path, udev_path):
+	cfs_dev = str(dev_path)
+	tmp_params = str(udev_path)
 	plugin_params = tmp_params.split(' ')
 
 	print " ConfigFS Device Alias: " + cfs_dev
-	tcm_createvirtdev(option, opt_str, value, parser)
+	tcm_createvirtdev(cfs_dev, plugin_params)
 
-def tcm_create_iblock(option, opt_str, value, parser):
+def tcm_create_iblock(dev_path, udev_path):
+	tcm_createvirtdev(dev_path, udev_path)
 
-	tcm_createvirtdev(option, opt_str, value, parser)
-
-def tcm_create_fileio(option, opt_str, value, parser):
-	cfs_dev = str(value[0])
-	file = str(value[1])
-	size_in_bytes = str(value[2])
+def tcm_create_fileio(dev_path, filename, size):
+	cfs_dev = str(dev_path)
+	filename = str(filename)
+	size_in_bytes = str(size)
 
 	fileio_params = "fd_dev_name=" + file + ",fd_dev_size=" + size_in_bytes
-	vals = [cfs_dev, fileio_params]	
-	tcm_createvirtdev(None, None, vals, None)
+	tcm_createvirtdev(cfs_dev, fileio_params)
 
-def tcm_create_ramdisk(option, opt_str, value, parser):
+def tcm_create_ramdisk(dev_path, pages):
+	tcm_createvirtdev(dev_path, pages)
 
-	tcm_createvirtdev(option, opt_str, value, parser)
-
-def __tcm_freevirtdev(value):
-	cfs_unsplit = str(value)
-	cfs_path = cfs_unsplit.split('/')
-	hba_cfs = cfs_path[0]
-	dev_vfs_alias = cfs_path[1]
+def __tcm_freevirtdev(dev_path):
+	cfs_unsplit = str(dev_path)
+	hba_cfs, dev_vfs_alias = cfs_unsplit.split('/')
 	print " ConfigFS HBA: " + hba_cfs
 	print " ConfigFS Device Alias: " + dev_vfs_alias
 
@@ -354,27 +345,26 @@ def __tcm_freevirtdev(value):
 		for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
 			if tg_pt_gp == "default_tg_pt_gp":
 				continue
-			vals = (value, tg_pt_gp)
-			__tcm_del_alua_tgptgp(vals)
+			__tcm_del_alua_tgptgp(dev_path, tg_pt_gp)
 
 	os.rmdir(cfs_dev_path)
 
-def tcm_freevirtdev(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
+def tcm_freevirtdev(dev_path):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
 	unit_serial = tcm_get_unit_serial(cfs_dev_path)
 
-	__tcm_freevirtdev(value)
+	__tcm_freevirtdev(dev_path)
 	# For explict tcm_node --freedev, delete any remaining
 	# PR APTPL and ALUA metadata
 	tcm_delete_aptpl_metadata(unit_serial)
 	tcm_alua_delete_metadata_dir(unit_serial)
 
-def tcm_list_dev_attribs(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
+def tcm_list_dev_attribs(dev_path):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
@@ -384,7 +374,7 @@ def tcm_list_dev_attribs(option, opt_str, value, parser):
 		with open(cfs_dev_path + "/attrib/" + attrib) as p:
 			print "       %s: %s" % (attrib, p.read(16).strip())
 
-def tcm_list_hbas(option, opt_str, value, parser):
+def tcm_list_hbas():
 
 	for hba in os.listdir(tcm_root):
 		if hba == "alua":
@@ -415,7 +405,7 @@ def tcm_list_hbas(option, opt_str, value, parser):
 			print "        " + value.rstrip()
 			print "        " + udev_str
 
-def tcm_list_alua_lugps(option, opt_str, value, parser):
+def tcm_list_alua_lugps():
 
 	for lu_gp in os.listdir(tcm_root + "/alua/lu_gps"):
 		group_path = tcm_root + "/alua/lu_gps/" + lu_gp
@@ -446,13 +436,13 @@ def tcm_dump_alua_state(alua_state_no):
 	else:
 		return "Unknown"
 
-def tcm_list_alua_tgptgp(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_list_alua_tgptgp(dev_path, gp_name):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	tg_pt_gp = str(value[1])
+	tg_pt_gp = str(gp_name)
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + tg_pt_gp
 	
 	if not os.path.isdir(tg_pt_gp_base):
@@ -492,18 +482,17 @@ def tcm_list_alua_tgptgp(option, opt_str, value, parser):
 		for member in tg_pt_gp_members:
 			print "         " + member
 
-def tcm_list_alua_tgptgps(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
+def tcm_list_alua_tgptgps(dev_path):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
 	for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
-		vals = [str(value), tg_pt_gp]
-		tcm_list_alua_tgptgp(None, None, vals, None)
+		tcm_list_alua_tgptgp(dev_path, tg_pt_gp)
 
-def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
+def tcm_show_persistent_reserve_info(dev_path):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
@@ -513,14 +502,14 @@ def tcm_show_persistent_reserve_info(option, opt_str, value, parser):
 		if info:
 			print info
 
-def tcm_set_alua_state(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_alua_state(dev_path, gp_name, access_state):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	alua_gp = str(value[1])
-	new_alua_state_str = str(value[2]).lower()
+	alua_gp = str(gp_name)
+	new_alua_state_str = str(access_state).lower()
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
 
 	if new_alua_state_str == "o":
@@ -536,14 +525,14 @@ def tcm_set_alua_state(option, opt_str, value, parser):
 
 	tcm_write(tg_pt_gp_base + "/alua_access_state", str(alua_state))
 
-def tcm_set_alua_type(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_alua_type(dev_path, gp_name, access_type):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	alua_gp = str(value[1])
-	new_alua_type_str = str(value[2]).lower()
+	alua_gp = str(gp_name)
+	new_alua_type_str = str(access_type).lower()
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
 
 	if new_alua_type_str == "both":
@@ -559,123 +548,123 @@ def tcm_set_alua_type(option, opt_str, value, parser):
 
 	tcm_write(tg_pt_gp_base + "/alua_access_type", str(alua_type))
 
-def tcm_set_alua_nonop_delay(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_alua_nonop_delay(dev_path, gp_name, msec_delay):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	alua_gp = str(value[1])
+	alua_gp = str(gp_name)
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
 	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
 
-	delay_msecs = str(value[2])
+	delay_msecs = str(msec_delay)
 
 	tcm_write(tg_pt_gp_base + "/nonop_delay_msecs", delay_msecs)
 
-def tcm_set_alua_trans_delay(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_alua_trans_delay(dev_path, gp_name, msec_delay):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	alua_gp = str(value[1])
+	alua_gp = str(gp_name)
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
 	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
 
-	delay_msecs = str(value[2])
+	delay_msecs = str(msec_delay)
 
 	tcm_write(tg_pt_gp_base + "/trans_delay_msecs", delay_msecs)
 
-def tcm_clear_alua_tgpt_pref(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_clear_alua_tgpt_pref(dev_path, gp_name):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	alua_gp = str(value[1])
+	alua_gp = str(gp_name)
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
 	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
 
 	tcm_write(tg_pt_gp_base + "/preferred", "0")
 
-def tcm_set_alua_tgpt_pref(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_alua_tgpt_pref(dev_path, gp_name):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	alua_gp = str(value[1])
+	alua_gp = str(gp_name)
 	tg_pt_gp_base = cfs_dev_path + "/alua/" + alua_gp
 	if not os.path.isdir(tg_pt_gp_base):
 		tcm_err("Unable to locate TG Pt Group: " + alua_gp)
 
 	tcm_write(tg_pt_gp_base + "/preferred", "1")
 
-def tcm_set_alua_lugp(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_alua_lugp(dev_path, gp_name):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	lu_gp_name = str(value[1])
+	lu_gp_name = str(gp_name)
 	if not os.path.isdir(tcm_root + "/alua/lu_gps/" + lu_gp_name):
 		tcm_err("ALUA Logical Unit Group: " + lu_gp_name + " does not exist!")
 
 	tcm_write(cfs_dev_path + "/alua_lu_gp", lu_gp_name)
 
-def tcm_set_dev_attrib(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_dev_attrib(dev_path, attrib, value):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	attrib = str(value[1])
-	value = str(value[2])
+	attrib = str(attrib)
+	value = str(value)
 
 	tcm_write(cfs_dev_path + "/attrib/" + attrib, value)
 
-def tcm_set_udev_path(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_udev_path(dev_path, udev_path):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	tcm_write(cfs_dev_path + "/udev_path", value[1], newline=False)
+	tcm_write(cfs_dev_path + "/udev_path", udev_path, newline=False)
 
-def tcm_set_wwn_unit_serial(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_wwn_unit_serial(dev_path, unit_serial):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	tcm_write(cfs_dev_path + "/wwn/vpd_unit_serial", value[1])
+	tcm_write(cfs_dev_path + "/wwn/vpd_unit_serial", unit_serial)
 
-def tcm_set_wwn_unit_serial_with_md(option, opt_str, value, parser):
-	cfs_unsplit = str(value[0])
+def tcm_set_wwn_unit_serial_with_md(dev_path, unit_serial):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
-	tcm_set_wwn_unit_serial(None, None, value, None)
+	tcm_set_wwn_unit_serial(dev_path, unit_serial)
 	# Process PR APTPL metadata
-	tcm_process_aptpl_metadata(None, None, cfs_unsplit, None)
+	tcm_process_aptpl_metadata(dev_path)
 	# Make sure the ALUA metadata directory exists for this storage object
 	tcm_alua_check_metadata_dir(cfs_dev_path)
 
-def tcm_show_udev_path(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
+def tcm_show_udev_path(dev_path):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
 
 	print tcm_read(cfs_dev_path + "/udev_path")
 
-def tcm_show_wwn_info(option, opt_str, value, parser):
-	cfs_unsplit = str(value)
+def tcm_show_wwn_info(dev_path):
+	cfs_unsplit = str(dev_path)
 	cfs_dev_path = tcm_get_cfs_prefix(cfs_unsplit)
 
 	tcm_check_dev_exists(cfs_dev_path)
@@ -685,8 +674,7 @@ def tcm_show_wwn_info(option, opt_str, value, parser):
 		if info:
 			print info
 
-def tcm_unload(option, opt_str, value, parser):
-
+def tcm_unload():
 	if not os.path.isdir(tcm_root):
 		tcm_err("Unable to access tcm_root: " + tcm_root)
 
@@ -819,6 +807,11 @@ cmdline_options = ( \
          dest="HBA/DEV", help="Show WWN info"),
 )
 
+def dispatcher(option, opt_str, value, parser, orig_callback):
+	if option.nargs == 1:
+		value = (value,)
+	orig_callback(*value)
+
 def main():
 
     parser = OptionParser(version=tcm_version())
@@ -833,6 +826,8 @@ def main():
         # common params for all options
         opt["action"] = "callback"
         opt["type"] = "string"
+        opt["callback_kwargs"] = dict(orig_callback=opt["callback"])
+        opt["callback"] = dispatcher
         parser.add_option(*cmd_aliases, **opt)
 
     (options, args) = parser.parse_args()
