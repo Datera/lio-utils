@@ -116,20 +116,20 @@ def tcm_add_alua_tgptgp_with_md(dev_path, gp_name, gp_id):
 
 	# If the default_tg_pt_gp is passed, we skip the creation (as it already exists)
 	# and just process ALUA metadata
-	if tg_pt_gp_name == 'default_tg_pt_gp' and tg_pt_gp_id == '0':
+	if gp_name == 'default_tg_pt_gp' and gp_id == '0':
 		tcm_alua_process_metadata(dev_path, gp_name, gp_id)
 		return
 
 	os.makedirs(alua_gp_path)
 
 	try:
-		tcm_write(alua_gp_path + "/tg_pt_gp_id",  tg_pt_gp_id)
+		tcm_write(alua_gp_path + "/tg_pt_gp_id",  gp_id)
 	except:
 		os.rmdir(alua_gp_path)
 		raise
 
 	# Now process the ALUA metadata for this group
-	tcm_alua_process_metadata(dev_path, tg_pt_gp_name, tg_pt_gp_id)
+	tcm_alua_process_metadata(dev_path, gp_name, gp_id)
 
 def tcm_delhba(hba_name):
 	hba_path = tcm_full_path(hba_name)
@@ -208,7 +208,7 @@ def tcm_createvirtdev(dev_path, plugin_params, establishdev=False):
 
 	# Calls into submodules depending on target_core_mod subsystem plugin
 	for tcm in tcm_types:
-		if hba_cfs.startswith(tcm["name"] + "_"):
+		if hba_path.startswith(tcm["name"] + "_"):
 			try:
 				if tcm["module"]:
 					# modules expect plugin_params to be a list, for now.
@@ -221,7 +221,7 @@ def tcm_createvirtdev(dev_path, plugin_params, establishdev=False):
 					+ full_path
 				raise
 
-			print tcm_read(cfs_dev_path + "/info")
+			print tcm_read(full_path + "/info")
 
 			if tcm["gen_uuid"] and gen_uuid:
         	                tcm_generate_uuid_for_unit_serial(dev_path)
@@ -251,6 +251,8 @@ def tcm_delete_aptpl_metadata(unit_serial):
 def tcm_process_aptpl_metadata(dev_path):
 	tcm_check_dev_exists(dev_path)
 
+	full_path = tcm_full_path(dev_path)
+
 	aptpl_file = "/var/target/pr/aptpl_" + tcm_get_unit_serial(dev_path)
 	if not os.path.isfile(aptpl_file):
 		return
@@ -272,8 +274,8 @@ def tcm_process_aptpl_metadata(dev_path):
 
 	# write info into configfs
 	for res in reservations:
-		tcm_write(cfs_dev_path + "/pr/res_aptpl_metadata", ",".join(res))
-	
+		tcm_write(full_path + "/pr/res_aptpl_metadata", ",".join(res))
+
 def tcm_establishvirtdev(dev_path, plugin_params):
 	tcm_createvirtdev(dev_path, plugin_params, True)
 
@@ -306,7 +308,7 @@ def __tcm_freevirtdev(dev_path):
 
 	full_path = tcm_full_path(dev_path)
 
-	for tg_pt_gp in os.listdir(cfs_dev_path + "/alua/"):
+	for tg_pt_gp in os.listdir(full_path + "/alua/"):
 		if tg_pt_gp == "default_tg_pt_gp":
 			continue
 		__tcm_del_alua_tgptgp(dev_path, tg_pt_gp)
