@@ -26,6 +26,10 @@ if [ -h /usr/sbin/tcm_dump ]; then
         unlink /usr/sbin/tcm_dump;
 fi
 
+if [ -h /usr/sbin/tcm_fabric ]; then
+        unlink /usr/sbin/tcm_fabric;
+fi
+
 if [ -h /usr/sbin/lio_node ]; then
         unlink /usr/sbin/lio_node;
 fi

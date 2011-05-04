@@ -40,7 +40,9 @@ LOCK_TARGET="/var/lock/subsys/target"
 LOG_EVENT="/var/log/iscsi/target.log"
 TCM_NODE="/usr/sbin/tcm_node"
 LIO_NODE="/usr/sbin/lio_node"
+TCM_FABRIC="/usr/sbin/tcm_fabric"
 SEMA_TARGET="/var/crash/target.fault"
+CONFIGFS_SCRIPT_DIR="/etc/target"
 TCM_CONFIGFS_SCRIPT="/etc/target/tcm_start.sh"
 LIO_CONFIGFS_SCRIPT="/etc/target/lio_start.sh"
 
@@ -91,6 +93,54 @@ cd /	    # to avoid making the CWD unmountable
 
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:$PATH"
 RETVAL=0
+
+function run_fabric_cfs_ops() {
+	DATETIME=$1
+
+	for i in $( ls $CONFIGFS_SCRIPT_DIR); do
+
+		CONFIGFS_SCRIPT_PATH="$CONFIGFS_SCRIPT_DIR/$i"
+		if [ ! -f $CONFIGFS_SCRIPT_PATH ]; then
+			continue
+		fi
+		# target core is handled in run_tcm_cfs_ops()
+		if [ $i == "tcm_start.sh" ]; then
+			continue
+		fi
+		# iscsi-target fabric module is handled in run_lio_target_cfs_ops()
+		if [ $i == "lio_start.sh" ]; then
+			continue
+		fi
+
+		if [[ $i =~ ".rpmsave" ]]; then
+			continue
+		fi
+
+		if [[ $i =~ ".dpkg-dist" ]]; then
+			continue
+		fi
+
+		if [ $DATETIME != "0" ]; then
+			FABRICNAME=`echo $i | sed -e s/_start.sh//`
+			BACKUPFILE=$FABRICNAME"_backup-$DATETIME.sh"
+			CONFIGFS_SCRIPT_PATH="/etc/target/backup/$BACKUPFILE"
+			if [ ! -f $CONFIGFS_SCRIPT_PATH ]; then
+				echo "Unable to locate config file $CONFIGFS_SCRIPT_PATH"
+				exit 1
+			fi
+		fi
+
+		echo -n $"Calling ConfigFS script $CONFIGFS_SCRIPT_PATH: "
+		sh ${CONFIGFS_SCRIPT_PATH} > /dev/null 2>&1
+		RET=$?
+		if [ $RET == 0 ]; then
+			echo "  [OK]"
+		else
+			echo "  [FAILED]"
+		fi
+		
+	done
+}
 
 function run_lio_target_cfs_ops() {
 	DATETIME=$1
@@ -146,6 +196,7 @@ function run_tcm_cfs_ops() {
 	fi
 
 	run_lio_target_cfs_ops $1
+	run_fabric_cfs_ops $1
 }
 
 function load_scsi_disk() {
@@ -206,6 +257,18 @@ function load_tcm_mod() {
 	return 0
 }
 
+function shutdown_fabrics() {
+	
+	echo -n $"Unloading fabric/configfs: "
+	${TCM_FABRIC} --unloadall
+	RETVAL=$?
+	if [ $RETVAL == 0 ]; then
+		echo "  [OK]"
+	else
+		echo "  [FAILED]: $RETVAL"
+	fi
+}
+
 function shutdown_lio_mod () {
 	if [ ! -d /sys/kernel/config/target/iscsi/ ]; then
 		return 0
@@ -223,6 +286,7 @@ function shutdown_lio_mod () {
 
 function unload_tcm_mod() {
 	
+	shutdown_fabrics
 	shutdown_lio_mod
 
 	echo -n $"Unloading target_core_mod/ConfigFS core: "

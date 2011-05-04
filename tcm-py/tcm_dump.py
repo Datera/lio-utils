@@ -15,6 +15,7 @@ import tcm_ramdisk
 import tcm_fileio
 
 import lio_dump
+import tcm_fabric
 
 tcm_root = "/sys/kernel/config/target/core"
 
@@ -297,6 +298,10 @@ def tcm_full_backup(option, opt_str, value, parser):
 	tcm_file = "/etc/target/tcm_start.sh"
 	lio_file = "/etc/target/lio_start.sh"
 	lio_active = 0
+
+	ret = tcm_fabric.fabric_backup_to_file_all(timestamp)
+	if ret:
+		print "Unable to backup tcm_fabric.modules"	
 	
 	if os.path.isdir("/sys/kernel/config/target/iscsi"):
 		lio_file_new = lio_dump.lio_backup_to_file(None, None, timestamp, None)

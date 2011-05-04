@@ -31,6 +31,11 @@ if [ ! -h /usr/sbin/tcm_dump ]; then
 	ln -s $INSTALL_PATH/tcm_dump.py /usr/sbin/tcm_dump;
 fi
 
+if [ ! -h /usr/sbin/tcm_fabric ]; then
+        chmod a+x $INSTALL_PATH/tcm_fabric.py;
+        ln -s $INSTALL_PATH/tcm_fabric.py /usr/sbin/tcm_fabric;
+fi
+
 if [ ! -h /usr/sbin/lio_node ]; then
 	chmod a+x $INSTALL_PATH/lio_node.py;
 	ln -s $INSTALL_PATH/lio_node.py /usr/sbin/lio_node;
