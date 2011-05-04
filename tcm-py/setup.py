@@ -5,7 +5,7 @@ long_desc="""Python CLI for controlling the generic target_core_mod/ConfigFS eng
 """
 
 setup (name='tcm',
-      version='3.2',
+      version='4.1',
       description='CLI for controlling target_core_mod/ConfigFS',
       long_description=long_desc,
       author='Nicholas A. Bellinger',

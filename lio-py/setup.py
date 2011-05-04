@@ -6,7 +6,7 @@ long_desc="""Python CLI for controlling the LIO-Target/ConfigFS fabric module
 """
 
 setup(name='lio',
-      version='3.2',
+      version='4.1',
       description='CLI for controlling LIO-Target/ConfigFS',
       long_description=long_desc,
       author='Nicholas A. Bellinger',
