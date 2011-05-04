@@ -13,10 +13,6 @@ if [ -f /usr/sbin/tcm_loop ]; then
         rm /usr/sbin/tcm_loop
 fi
 
-if [ -f /usr/sbin/tcm_snap ]; then
-        rm /usr/sbin/tcm_snap
-fi
-
 if [ -f /usr/sbin/tcm_fabric ]; then
         rm /usr/sbin/tcm_fabric
 fi
