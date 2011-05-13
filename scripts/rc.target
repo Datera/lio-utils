@@ -111,12 +111,24 @@ function run_fabric_cfs_ops() {
 		if [ $i == "lio_start.sh" ]; then
 			continue
 		fi
-
+		# Skip RPM package save+orig+new
 		if [[ $i =~ ".rpmsave" ]]; then
 			continue
 		fi
 
-		if [[ $i =~ ".dpkg-dist" ]]; then
+		if [[ $i =~ ".rpmorig" ]]; then
+			continue
+		fi
+
+		if [[ $i =~ ".rpmnew" ]]; then
+			continue
+		fi
+		# Skip dpkg dist
+                if [[ $i =~ ".dpkg-dist" ]]; then
+                        continue
+                fi
+		# Skip emacs state files
+		if [[ $i =~ ~$ ]]; then
 			continue
 		fi
 
@@ -138,7 +150,7 @@ function run_fabric_cfs_ops() {
 		else
 			echo "  [FAILED]"
 		fi
-		
+
 	done
 }
 
@@ -258,7 +270,7 @@ function load_tcm_mod() {
 }
 
 function shutdown_fabrics() {
-	
+
 	echo -n $"Unloading fabric/configfs: "
 	${TCM_FABRIC} --unloadall
 	RETVAL=$?
