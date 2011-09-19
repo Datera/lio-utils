@@ -1,12 +1,12 @@
 #!/bin/sh
 
-if [ -x "/etc/init.d/target" ]; then
-        if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-                invoke-rc.d target stop || exit $?
-        else
-                /etc/init.d/target stop || exit $?
-        fi
-fi
+#if [ -x "/etc/init.d/target" ]; then
+#        if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+#                invoke-rc.d target stop || exit $?
+#        else
+#                /etc/init.d/target stop || exit $?
+#        fi
+#fi
 
 update-rc.d -f target remove
 

@@ -41,11 +41,11 @@ if [ ! -h /usr/sbin/lio_dump ]; then
 	ln -s $INSTALL_PATH/lio_dump.py /usr/sbin/lio_dump;
 fi
 
-if [ -x "/etc/init.d/target" ]; then
-        update-rc.d target defaults >/dev/null
-        if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-                invoke-rc.d target start || exit $?
-        else
-                /etc/init.d/target start || exit $?
-        fi
-fi
+#if [ -x "/etc/init.d/target" ]; then
+#        update-rc.d target defaults >/dev/null
+#        if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+#                invoke-rc.d target start || exit $?
+#        else
+#                /etc/init.d/target start || exit $?
+#        fi
+#fi
