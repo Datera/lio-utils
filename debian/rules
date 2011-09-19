@@ -42,6 +42,7 @@ install: build
 build: build-stamp
 build-stamp: 
 	dh_testdir
+	$(MAKE) DESTDIR=$(CURDIR)/debian/lio-utils -C tools
 	cd tcm-py ; $(setup) build --build-base build/tcm-py/ install --no-compile --root=$(CWD)/debian/lio-utils/
 #	echo "2.5, 2.6" > $(install_dir)/lib/pylio/.version
 	cd lio-py ; $(setup) build --build-base build/lio-py/ install --no-compile --root=$(CWD)/debian/lio-utils/
