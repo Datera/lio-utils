@@ -358,8 +358,8 @@ def fabric_unload(fabric_name, fabric_root, module_name):
 							continue
 
 						if os.path.islink(lun_link_dir + "/" + lun_acl_link):
-							unlink_op = "unlink " + lun_link_dir + "/" + lun_acl_link
-							ret = os.system(unlink_op)
+							unlink_op = lun_link_dir + "/" + lun_acl_link
+							ret = os.unlink(unlink_op)
 							if ret:
 								print "Unable to unlink MappedLUN: " + lun_link_dir + "/" + lun_acl_link
 
@@ -383,8 +383,8 @@ def fabric_unload(fabric_name, fabric_root, module_name):
 					if not os.path.islink(lun_dir + "/" + port):
 						continue
 
-					unlink_op = "unlink " + lun_dir + "/" + port
-					ret = os.system(unlink_op)
+					unlink_op = lun_dir + "/" + port
+					ret = os.unlink(unlink_op)
 					if ret:
 						print "Unable to unlink fabric port/lun"
 

@@ -157,8 +157,7 @@ def tcm_loop_dellun(option, opt_str, value, parser):
 		print "Active TCM_Loop port link does not exist!"
 		sys.exit(1)
 
-	unlink_op = "unlink " + port_link
-	ret = os.system(unlink_op)
+	ret = os.unlink(port_link)
 	if ret:
 		print "Unable to unlink port for virtual SCSI Logical Unit: " + port
 		sys.exit(1)

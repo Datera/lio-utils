@@ -361,9 +361,9 @@ def __lio_target_del_port(option, opt_str, value, parser):
 		if not os.path.islink(lun_dir + "/" + port):
 			continue
 
-		unlink_op = "unlink " + lun_dir + "/" + port
+		unlink_op = lun_dir + "/" + port
 #		print "del_portunlink_op: " + unlink_op
-		ret = os.system(unlink_op)
+		ret = os.unlink(unlink_op)
 		if ret:
 			lio_err("Unable to unlink iSCSI Target Logical Unit")
 
@@ -552,9 +552,9 @@ def lio_target_del_lunacl(option, opt_str, value, parser):
 		if not os.path.islink(lun_link_dir + "/" + lun_acl_link):
 			continue;
 
-		unlink_op = "unlink " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/" + lun_acl_link
+		unlink_op = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/acls/" + initiator_iqn + "/lun_" + mapped_lun + "/" + lun_acl_link
 #		print "unlink_op: " + unlink_op
-		ret = os.system(unlink_op)
+		ret = os.unlink(unlink_op)
 		if ret:
 			lio_err("Unable to unlink iSCSI Initiator Mapped LUN: " + mapped_lun + " ACL " + initiator_iqn + " for iSCSI Target Portal Group: " + iqn + " " + tpgt)
 		
