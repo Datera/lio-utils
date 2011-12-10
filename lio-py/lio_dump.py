@@ -121,6 +121,22 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 				print "echo " + value.rstrip() + " > " + attrib_file
 				os.close(p)
 	
+			# Dump values of iscsi/iqn/tpgt/attrib/
+			print "#### authentication for iSCSI Target Portal Group"
+			auth_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/auth/"
+			if os.path.isdir(auth_dir):
+				auth_root = os.listdir(auth_dir)
+				for auth in auth_root:
+					auth_file = auth_dir + auth
+					p = os.open(auth_file, 0)
+					value = os.read(p, 256)
+					ret = value.isspace()
+					if ret:
+						os.close(p)
+						continue
+					print "echo -n " + value.rstrip() + " > " + auth_file
+					os.close(p)
+
 			# Dump values for iscsi/iqn/tpgt/param
 			print "#### Parameters for iSCSI Target Portal Group"
 			param_dir = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/param/"
