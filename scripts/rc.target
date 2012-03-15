@@ -51,9 +51,9 @@ LIO_CONFIGFS_SCRIPT="/etc/target/lio_start.sh"
 # Enable: Set DEBUG=1    Disable: Set DEBUG=0
 
 DEBUG=0
-LOGFILE=/tmp/tgtctl.dbug
+LOGFILE=/var/log/tgtctl.dbug
 
-if [ $DEBUG ]; then
+if [ $DEBUG != 0 ]; then
 	echo "$0 $*" >> $LOGFILE
 fi
 #########################################################################
