@@ -25,6 +25,11 @@ def tcm_err(msg):
 def tcm_read(filename):
 	with open(filename) as f:
 		return f.read()
+	except IOError, (errno, strerror):
+		if errno == 2:
+			print "%s %s\n" % (filename, strerror)
+			print "Is kernel module loaded?\n"
+			exit 1
 
 def tcm_write(filename, value, newline=True):
 	with open(filename, "w") as f:

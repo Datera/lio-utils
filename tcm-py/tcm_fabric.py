@@ -472,6 +472,11 @@ def fabric_unloadall():
 			continue
 
 		fabric_unload(fabric_name, fabric_root, module_name)
+	except OSError, (errno, strerror):
+		if errno == 2:
+			print "%s %s\n" % (target_root, strerror)
+			print "Is kernel module loaded?\n"
+			exit 1
 		
 
 def do_work(stdout_enable, stdout_enable_all, date_time, unload, unloadall, fabric_name, fabric_root, module_name):
