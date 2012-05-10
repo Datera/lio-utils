@@ -9,6 +9,10 @@ import optparse
 target_root = "/sys/kernel/config/target/"
 spec_root = "/var/target/fabric/"
 
+def fabric_err(msg):
+	print >> sys.stderr, msg
+	sys.exit(1)
+
 def fabric_configfs_dump(fabric_name, fabric_root, module_name):
 
 	if not os.path.isdir(fabric_root):
@@ -455,28 +459,27 @@ def fabric_unloadall():
 
 	module_name = ""
 
-	for fabric_name in os.listdir(target_root):
-		if fabric_name == "version":
-			continue
-		if fabric_name == "core":
-			continue
-		# FIXME: currently using lio_node --unload
-		if fabric_name == "iscsi":
-			continue
+	try:
+		for fabric_name in os.listdir(target_root):
+			if fabric_name == "version":
+				continue
+			if fabric_name == "core":
+				continue
+			# FIXME: currently using lio_node --unload
+			if fabric_name == "iscsi":
+				continue
 
-		fabric_root = target_root + fabric_name
-		module_name = fabric_get_module_name(fabric_name)
-#		print "fabric_get_module_name() using: " + module_name
+			fabric_root = target_root + fabric_name
+			module_name = fabric_get_module_name(fabric_name)
+			#print "fabric_get_module_name() using: " + module_name
 		
-		if module_name == "":
-			continue
+			if module_name == "":
+				continue
 
-		fabric_unload(fabric_name, fabric_root, module_name)
+			fabric_unload(fabric_name, fabric_root, module_name)
 	except OSError, (errno, strerror):
 		if errno == 2:
-			print "%s %s\n" % (target_root, strerror)
-			print "Is kernel module loaded?\n"
-			exit 1
+			fabric_err("%s %s\n%s" % (target_root, strerror, "Is kernel module loaded?") )
 		
 
 def do_work(stdout_enable, stdout_enable_all, date_time, unload, unloadall, fabric_name, fabric_root, module_name):
