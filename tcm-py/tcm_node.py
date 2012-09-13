@@ -186,7 +186,6 @@ def tcm_generate_uuid_for_unit_serial(dev_path):
 
 tcm_types = ( \
     dict(name="pscsi", module=tcm_pscsi, gen_uuid=False),
-    dict(name="stgt", module=None, gen_uuid=True),
     dict(name="iblock", module=tcm_iblock, gen_uuid=True),
     dict(name="rd_dr", module=tcm_ramdisk, gen_uuid=True),
     dict(name="rd_mcp", module=tcm_ramdisk, gen_uuid=True),
@@ -598,7 +597,7 @@ def tcm_unload():
 		tcm_del_alua_lugp(lu_gp)
 
 	# Unload TCM subsystem plugin modules
-	for module in ("iblock", "file", "pscsi", "stgt"):
+	for module in ("iblock", "file", "pscsi"):
 		os.system("rmmod target_core_%s" % module)
 
 	# Unload TCM Core
