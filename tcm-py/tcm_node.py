@@ -578,6 +578,21 @@ def tcm_show_wwn_info(dev_path):
 		if info:
 			print info
 
+def tcm_unload_modules(mod):
+	p = sub.Popen(["lsmod"], stdout=sub.PIPE)
+	o = p.communicate()[0]
+	for l in o.splitlines():
+		m = l.split()
+		if m[0] == mod:
+			if len(m) > 3:
+				for d in m[3].split(","):
+					tcm_unload_modules(d)
+			rmmod_op = "rmmod " + mod
+			ret = os.system(rmmod_op)
+			if ret:
+				tcm_err("Unable to " + rmmod_op)
+	return
+
 def tcm_unload():
 	if not os.path.isdir(tcm_root):
 		tcm_err("Unable to access tcm_root: " + tcm_root)
@@ -596,15 +611,8 @@ def tcm_unload():
 
 		tcm_del_alua_lugp(lu_gp)
 
-	# Unload TCM subsystem plugin modules
-	for module in ("iblock", "file", "pscsi"):
-		os.system("rmmod target_core_%s" % module)
-
-	# Unload TCM Core
-	rmmod_op = "rmmod target_core_mod"
-	ret = os.system(rmmod_op)
-	if ret:
-		tcm_err("Unable to rmmod target_core_mod")
+	# Unload TCM subsystem plugin modules + TCM core
+	tcm_unload_modules("target_core_mod")
 
 def tcm_version():
 	return tcm_read("/sys/kernel/config/target/version").strip()
