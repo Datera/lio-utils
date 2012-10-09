@@ -215,10 +215,12 @@ function shutdown_fabrics() {
 
 function shutdown_lio_mod () {
 	if ! lsmod | grep -q iscsi_target_mod ; then
-	    echo -n $"Unloading LIO-Target/ConfigFS fabric: "
-	    ${LIO_NODE} --unload
-	    rc_status -v
-        fi
+	    return 0
+	fi
+
+	echo -n $"Unloading LIO-Target/ConfigFS fabric: "
+	${LIO_NODE} --unload
+	rc_status -v
 }
 
 function unload_tcm_mod() {
