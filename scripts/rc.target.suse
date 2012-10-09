@@ -1,0 +1,403 @@
+#!/bin/bash
+#
+# Filename:  /etc/init.d/target
+# target:	Bring up/down target_core_mod and iscsi_target_mod v3.0
+#
+# Bring up/down iscsi target networking
+#
+# chkconfig: 2345 18 01
+# description:	Target_Core_Mod + LIO-target + ConfigFS v3.x
+# config: /etc/sysconfig/target
+#
+#########################################################################
+#
+
+# For SuSE, the following information is read by "insserv" program and the
+# start/stoplinks are installed at appropriate runlevels.
+# The network interface and logger has to be up for starting target service
+
+### BEGIN INIT INFO
+# Provides: target
+# Required-Start: $network $syslog
+# Required-Stop:  $network $syslog
+# Default-Start:  2 3 5
+# Default-Stop:   0 1 6
+# Description:    TCM/ConfigFS and LIO-Target
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.status
+
+#########################################################################
+# Our product file definitions
+
+MODNAME="target_core_mod"
+
+TCM_CFS_DIR="/sys/kernel/config/target/core"
+LIO_CFS_DIR="/sys/kernel/config/target/iscsi"
+FILE_TCFG="/etc/sysconfig/target"
+LOCK_TARGET="/var/lock/subsys/target"
+LOG_EVENT="/var/log/iscsi/target.log"
+TCM_NODE="/usr/sbin/tcm_node"
+LIO_NODE="/usr/sbin/lio_node"
+TCM_FABRIC="/usr/sbin/tcm_fabric"
+SEMA_TARGET="/var/crash/target.fault"
+CONFIGFS_SCRIPT_DIR="/etc/target"
+TCM_CONFIGFS_SCRIPT="/etc/target/tcm_start.sh"
+LIO_CONFIGFS_SCRIPT="/etc/target/lio_start.sh"
+
+#########################################################################
+# Allows saving command & arguments into a file for subsequent debugging
+# Enable: Set DEBUG=1    Disable: Set DEBUG=0
+
+DEBUG=0
+LOGFILE=/tmp/tgtctl.dbug
+
+if [ $DEBUG ]; then
+	echo "$0 $*" >> $LOGFILE
+fi
+#########################################################################
+
+ARGS_CHECK=2
+ARGS_COUNT=$#
+
+cd /	    # to avoid making the CWD unmountable
+
+#########################################################################
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:$PATH"
+RETVAL=0
+
+function tcm_check() {
+    local RETVAL=0
+
+    if [ ! -f ${TCM_NODE} ]; then
+	echo "${TCM_NODE} does not exist"
+	RETVAL=1
+	rc_failed $RETVAL
+	return $RETVAL
+    fi
+
+    if [ ! -f ${LIO_NODE} ]; then
+	echo "${LIO_NODE} does not exist"
+	RETVAL=1
+	rc_failed $RETVAL
+	return $RETVAL
+    fi
+
+    if [ ! -d /var/target/pr ]; then
+	echo "/var/target/pr does not exist"
+	RETVAL=1
+	rc_failed $RETVAL
+	return $RETVAL
+    fi
+
+    if [ ! -d /var/target/alua ]; then
+	echo "/var/target/alua does not exist"
+	RETVAL=1
+	rc_failed $RETVAL
+    fi
+    return $RETVAL
+}
+
+function run_fabric_cfs_ops() {
+	for i in $( ls $CONFIGFS_SCRIPT_DIR); do
+
+		CONFIGFS_SCRIPT_PATH="$CONFIGFS_SCRIPT_DIR/$i"
+		if [ ! -f $CONFIGFS_SCRIPT_PATH ]; then
+			continue
+		fi
+		# target core is handled in run_tcm_cfs_ops()
+		if [ $i == "tcm_start.sh" ]; then
+			continue
+		fi
+		# iscsi-target fabric module is handled in run_lio_target_cfs_ops()
+		if [ $i == "lio_start.sh" ]; then
+			continue
+		fi
+		# Skip RPM package save+orig+new
+		if [[ $i =~ ".rpmsave" ]]; then
+			continue
+		fi
+
+		if [[ $i =~ ".rpmorig" ]]; then
+			continue
+		fi
+
+		if [[ $i =~ ".rpmnew" ]]; then
+			continue
+		fi
+		# Skip dpkg dist
+                if [[ $i =~ ".dpkg-dist" ]]; then
+                        continue
+                fi
+		# Skip emacs state files
+		if [[ $i =~ ~$ ]]; then
+			continue
+		fi
+
+		echo -n $"Calling ConfigFS script $CONFIGFS_SCRIPT_PATH: "
+		sh ${CONFIGFS_SCRIPT_PATH} > /dev/null 2>&1
+		if [ $RET != 0 ]; then
+		    rc_failed 1
+		fi
+		rc_status -v
+	done
+}
+
+function run_lio_target_cfs_ops() {
+	if [ -f $LIO_CONFIGFS_SCRIPT ]; then
+	    echo -n $"Calling $LIO_CONFIGFS_SCRIPT for iscsi_target_mod: "
+	    sh ${LIO_CONFIGFS_SCRIPT} > /dev/null 2>&1
+	    RET=$?
+	    if [ $RET != 0 ]; then
+		rc_failed 1
+	    fi
+	    rc_status -v
+	fi
+}
+
+function run_tcm_cfs_ops() {
+	if [ -f $TCM_CONFIGFS_SCRIPT ]; then
+		echo -n $"Calling $TCM_CONFIGFS_SCRIPT for target_core_mod: "
+		sh ${TCM_CONFIGFS_SCRIPT} > /dev/null 2>&1
+		RET=$?
+		if [ $RET != 0 ]; then
+		    rc_failed 1
+		fi
+		rc_status -v
+	fi
+
+	run_lio_target_cfs_ops
+	run_fabric_cfs_ops
+}
+
+function check_configfs_mount() {
+	if [ ! -d /sys/kernel/config ]; then
+		modprobe configfs
+		mount -t configfs configfs /sys/kernel/config
+		RET=$?
+		if [ $RET != 0 ]; then
+			echo -n "ERROR: Unable to mount configfs on /sys/kernel/config"
+			rc_failed 1
+			rc_exit
+		fi
+	fi
+}
+
+function unload_lio_mode() {
+	echo -n "Unload Linux-iSCSI.org Fabric module"
+	rmmod iscsi_target_mod
+	rc_status -v
+}
+
+function load_tcm_mod() {
+	check_configfs_mount
+	RETVAL=$?
+	if [ $RETVAL != 0 ]; then
+	    rc_failed 1
+	    return 1
+	fi
+
+	echo -n $"Loading target_core_mod/ConfigFS core: "
+	modprobe -q ${MODNAME} > /dev/null
+	rc_status -v
+
+	return 0
+}
+
+function shutdown_fabrics() {
+
+	echo -n $"Unloading fabric/configfs: "
+	${TCM_FABRIC} --unloadall
+	rc_status -v
+}
+
+function shutdown_lio_mod () {
+	if [ -d /sys/kernel/config/target/iscsi/ ]; then
+	    echo -n $"Unloading LIO-Target/ConfigFS fabric: "
+	    ${LIO_NODE} --unload
+	    rc_status -v
+        fi
+}
+
+function unload_tcm_mod() {
+    local RETVAL=0
+    if [ -d /sys/kernel/config/target ] ; then
+	shutdown_fabrics
+	shutdown_lio_mod
+
+	echo -n $"Unloading target_core_mod/ConfigFS core: "
+	$TCM_NODE --unload
+	sleep 1
+	RETVAL=$?
+	if [ $RETVAL != 0 ] ; then
+	    rc_failed 1
+	fi
+	rc_status -v
+    fi
+    return $RETVAL
+}
+
+start () {
+	if [ -d ${TCM_CFS_DIR} ]; then
+		echo -n "target_core_mod/ConfigFS core already loaded"
+		rc_status -v
+		return 0
+	fi
+	if test "x `lsmod | grep ${MODNAME} | awk '{ if ($$1 == "${MODNAME}") print $$1 }'`" == x ; then
+		return 0
+	else
+		if [ -e ${LOCK_TARGET} ]; then
+			rm -f ${LOCK_TARGET}
+		fi
+	fi
+
+# Prevent multiple driver panics from hanging system (probably via scsi or target driver).
+# HINT: Most likely cause is a problem within '/etc/iscsi/install.target'.
+# Save a backup of the file, then NULL'd it to troubleshoot this variant.
+	if [ -e ${SEMA_TARGET} ]; then
+		RETVAL=1
+		echo -n "See ${SEMA_TARGET}"
+		rc_failed $RETVAL
+		return $RETVAL
+	fi
+
+# Put message in semaphore file to aid in troubleshooting should
+# the file still exist during a subsequent boot.
+	echo "$0: Created: " `date` > ${SEMA_TARGET}
+	echo "$0: " >> ${SEMA_TARGET}
+	echo "$0: This file has been created as a result of a potentially" >> ${SEMA_TARGET}
+	echo "$0: recursive module startup problem.  Probable cause is an" >> ${SEMA_TARGET}
+	echo "$0: iSCSI device configuration problem which finds its way" >> ${SEMA_TARGET}
+	echo "$0: catastrophically into the Target Core Stack." >> ${SEMA_TARGET}
+	echo "$0: " >> ${SEMA_TARGET}
+	echo "$0: You must remove /var/crash/target.fault before attempting" >> ${SEMA_TARGET}
+	echo "$0: to start again." >> ${SEMA_TARGET}
+	echo "$0: " >> ${SEMA_TARGET}
+	echo "$0: Continued startup problems might be researched by saving" >> ${SEMA_TARGET}
+	echo "$0: off the current /etc/iscsi/install.target file and then" >> ${SEMA_TARGET}
+	echo "$0: replacing it with a dummy file which contains no entries." >> ${SEMA_TARGET}
+	echo "$0: If bootup is then successful, contact the iSCSI Target" >> ${SEMA_TARGET}
+	echo "$0: Stack manufacturer for assistance with problems within" >> ${SEMA_TARGET}
+	echo "$0: the target configuration file." >> ${SEMA_TARGET}
+
+	if [ -e ${LOCK_TARGET} ]; then
+		rm -f ${SEMA_TARGET}
+		RETVAL=1
+		echo -n "ERROR, target_core_mod already active"
+		rc_failed $RETVAL
+		return $RETVAL
+	fi
+
+	load_tcm_mod
+	if [ $RETVAL != 0 ]; then
+		rm -f ${SEMA_TARGET}
+		return $RETVAL
+	fi
+
+	sleep 1
+
+	${PGM_SET_TNAME}
+	RETVAL=$?
+	if [ $RETVAL == 2 ]; then
+		rm -f ${SEMA_TARGET}
+		unload_tcm_mod
+		return $RETVAL
+	fi
+
+	run_tcm_cfs_ops $1
+	touch ${LOCK_TARGET}
+	rm -f ${SEMA_TARGET}
+
+	return $RETVAL
+}
+
+stop () {
+	rm -f ${SEMA_TARGET}
+
+	if [ ! -d /sys/kernel/config/target ] ; then
+	    echo -n "target_core_mod/ConfigFS core already unloaded"
+	    rc_status -v
+	    return;
+	fi
+	unload_tcm_mod
+	RET=$?
+	if [ $RET == 0 ]; then
+	    rm -f ${LOCK_TARGET}
+	fi
+	return $RET
+}
+
+function lio_version () {
+	if [ ! -d ${LIO_CFS_DIR} ]; then
+		exit 1
+	fi
+
+	lio_node --version
+}
+
+function lio_status () {
+	if [ ! -d ${LIO_CFS_DIR} ]; then
+		exit 1
+	fi
+
+	lio_node --listendpoints
+}
+
+function tcm_version () {
+	if [ ! -d ${TCM_CFS_DIR} ]; then
+		exit 1
+	fi
+
+	tcm_node --version
+}
+
+function tcm_status () {
+	if [ ! -d ${TCM_CFS_DIR} ]; then
+		exit 1
+	fi
+
+	echo "[---------------------------] TCM/ConfigFS Status [----------------------------]"
+	tcm_node --listhbas
+
+	echo ""
+	echo "[---------------------------] LIO-Target Status [----------------------------]"
+	lio_status
+
+	echo ""
+	tcm_version
+	lio_version
+	rc_status -v
+}
+
+restart () {
+	stop
+	start
+	RETVAL=$?
+}
+
+case "$1" in
+	start)
+		if tcm_check ; then
+			start
+		fi
+		;;
+	stop)
+		if tcm_check ; then
+			stop
+		fi
+		;;
+	status)
+		tcm_status
+		RETVAL=$?
+		;;
+	restart|reload)
+		restart
+		;;
+	*)
+		echo $"Usage: $0 {start|startbak|stop|status|restart}"
+		exit 1
+esac
+
+rc_exit
