@@ -214,7 +214,7 @@ function shutdown_fabrics() {
 }
 
 function shutdown_lio_mod () {
-	if [ -d /sys/kernel/config/target/iscsi/ ]; then
+	if -ne lsmod | grep -q iscsi_target_mod ; then
 	    echo -n $"Unloading LIO-Target/ConfigFS fabric: "
 	    ${LIO_NODE} --unload
 	    rc_status -v
@@ -229,10 +229,11 @@ function unload_tcm_mod() {
 
 	echo -n $"Unloading target_core_mod/ConfigFS core: "
 	$TCM_NODE --unload
-	sleep 1
 	RETVAL=$?
 	if [ $RETVAL != 0 ] ; then
 	    rc_failed 1
+	else
+	    sleep 1
 	fi
 	rc_status -v
     fi

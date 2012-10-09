@@ -1198,10 +1198,9 @@ def lio_target_set_tpg_param(option, opt_str, value, parser):
 
 def lio_target_unload(option, opt_str, value, parser):
 
-	if not os.path.isdir(lio_root):
-		lio_err("Unable to access lio_root: " + lio_root)
-
-	iqn_root = os.listdir(lio_root)
+	iqn_root = ""
+	if os.path.isdir(lio_root):
+		iqn_root = os.listdir(lio_root)
 
 	# Loop through LIO-Target IQN list
 	for iqn in iqn_root:
@@ -1224,10 +1223,12 @@ def lio_target_unload(option, opt_str, value, parser):
 
 		__lio_target_del_iqn(None, None, iqn, None, 0)
 
-	rmdir_op = "rmdir " + lio_root
-	ret = os.system(rmdir_op)
-	if ret:
-		print "Unable to release lio_root: " + lio_root
+
+	if iqn_root:
+		rmdir_op = "rmdir " + lio_root
+		ret = os.system(rmdir_op)
+		if ret:
+			print "Unable to remove lio_root: " + lio_root
 
 	rmmod_op = "rmmod iscsi_target_mod"
 	ret = os.system(rmmod_op)

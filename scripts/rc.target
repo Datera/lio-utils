@@ -282,7 +282,7 @@ function shutdown_fabrics() {
 }
 
 function shutdown_lio_mod () {
-	if [ ! -d /sys/kernel/config/target/iscsi/ ]; then
+	if -ne lsmod | grep -q iscsi_target_mod ; then
 		return 0
 	fi
 
