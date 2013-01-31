@@ -50,15 +50,29 @@ def createvirtdev(path, params):
 def fd_freevirtdev():
 	pass
 
+def fd_get_buffered_mode(value):
+
+	off = value.index(' Mode: ')
+	off += 7
+	fd_dev_mode_tmp = value[off:]
+	fd_dev_mode = fd_dev_mode_tmp.split(' ')
+	if re.search('Buffered', fd_dev_mode[0]):
+		fd_dev_mode_str = ",fd_buffered_io=1"
+	else:
+		fd_dev_mode_str = ""
+
+	return fd_dev_mode_str
+
 def fd_get_params(path):
         # Reference by udev_path if available   
 	udev_path_file = path + "/udev_path"
 	p = os.open(udev_path_file, 0)
 	value = os.read(p, 1024)
 	if re.search('/dev/', value):
-		os.close(p)
-		# Append a FILEIO size of ' 0', as struct block_device sector count is autodetected by TCM
-		return "fd_dev_name=" + value.rstrip() + ",fd_dev_size=0"
+		fd_dev_blockdev = 1
+		fd_dev_blockdev_str = "fd_dev_name=" + value.rstrip() + ",fd_dev_size=0"
+	else:
+		fd_dev_blockdev = 0
 
 	os.close(p)
 
@@ -71,6 +85,11 @@ def fd_get_params(path):
 		return
 	p.close()
 
+	if fd_dev_blockdev:
+		fd_dev_mode_str = fd_get_buffered_mode(value)
+		# Append a FILEIO size of ' 0', as struct block_device sector count is autodetected by TCM
+		return fd_dev_blockdev_str + fd_dev_mode_str
+
 	off = value.index('File: ')
 	off += 6
 	fd_dev_name_tmp = value[off:]
@@ -79,7 +98,10 @@ def fd_get_params(path):
 	off += 7
 	fd_dev_size_tmp = value[off:]
 	fd_dev_size = fd_dev_size_tmp.split(' ')
-	params = "fd_dev_name=" + fd_dev_name[0] + ",fd_dev_size=" + fd_dev_size[0]
+
+	fd_dev_mode_str = fd_get_buffered_mode(value)
+
+	params = "fd_dev_name=" + fd_dev_name[0] + ",fd_dev_size=" + fd_dev_size[0] + fd_dev_mode_str
 
 	# fd_dev_name= and fd_dev_size= parameters for tcm_node --createdev
 	return params
