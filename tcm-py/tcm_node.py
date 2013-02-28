@@ -298,7 +298,7 @@ def tcm_create_pscsi(dev_path, ctl):
 	tcm_createvirtdev(dev_path, pscsi_params_str)
 
 def tcm_create_pscsibyudev(dev_path, udev_path):
-	tcm_createvirtdev(dev_dev, udev_path)
+	tcm_createvirtdev(dev_path, udev_path)
 
 def tcm_create_iblock(dev_path, udev_path):
 	tcm_createvirtdev(dev_path, udev_path)
