@@ -57,7 +57,15 @@ def lio_target_configfs_dump(option, opt_str, value, parser):
 			print "#### Network portals for iSCSI Target Portal Group"
 			np_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np")
 			for np in np_root:
-				print "mkdir -p " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np/" + np
+				np_path = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np/" + np
+				print "mkdir -p " + np_path
+				np_path_iser = np_path + "/iser"
+				if os.path.isfile(np_path_iser):
+					iser_fd = open(np_path_iser, 'r')
+					iser_attr = iser_fd.read()
+					iser_attr = iser_attr.strip()
+					if iser_attr == "1":
+						print "echo 1 > " + np_path_iser
 
 			print "#### iSCSI Target Ports"
 			lun_root = os.listdir(lio_root + "/" + iqn + "/tpgt_" + tpgt + "/lun")
