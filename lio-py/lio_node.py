@@ -277,7 +277,20 @@ def lio_target_del_np(option, opt_str, value, parser):
 	tpgt = str(value[1]);
 	np = str(value[2]);
 
-	rmdir_op = "rmdir " + lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np/" + np
+	path = lio_root + "/" + iqn + "/tpgt_" + tpgt + "/np/" + np
+
+	path_iser = path + "/iser"
+	if os.path.isfile(path_iser):
+		fd = open(path_iser, 'r')
+		s = fd.read()
+		set_iser_attr = s.strip()
+		fd.close()
+		if set_iser_attr == "1":
+			fd = open(path_iser, 'w')
+			fd.write("0")
+			fd.close()
+
+	rmdir_op = "rmdir " + path
 #	print "rmdir_op: " + rmdir_op
 	ret = os.system(rmdir_op)
 	if not ret:
@@ -1229,6 +1242,15 @@ def lio_target_unload(option, opt_str, value, parser):
 		ret = os.system(rmdir_op)
 		if ret:
 			print "Unable to remove lio_root: " + lio_root
+
+	fd = open("/proc/modules", 'r')
+	buf = fd.read()
+	fd.close()
+	if re.search('ib_isert', buf):
+	        rmmod_op = "rmmod ib_isert"
+	        ret = os.system(rmmod_op)
+	        if ret:
+	                print "Unable to unload ib_isert"
 
 	rmmod_op = "rmmod iscsi_target_mod"
 	ret = os.system(rmmod_op)
