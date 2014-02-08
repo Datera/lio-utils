@@ -2,7 +2,7 @@ lio-utils is a Python library that provides a simple low-level configuration
 tool set for the LIO Linux SCSI Target. lio-utils use the configFS kernel API
 that is available with LIO.
 
-lio-utils was developed by Datera, Inc. (www.daterainc.com).
+lio-utils was developed by Datera, Inc. (www.datera.io).
 
 For more information, please see:
 
