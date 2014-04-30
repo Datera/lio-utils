@@ -49,7 +49,14 @@ def rd_get_params(path):
 	off += 11 # Skip over "PAGE_SIZE: "
 	rd_pages_tmp = value[off:]
 	rd_pages = rd_pages_tmp.split('*')
-	params = "rd_pages=" + rd_pages[0]
+	params = rd_pages[0]
 
-	# rd_pages= parameter for tcm_node --createdev
-	return rd_pages[0]
+	try:
+		off = value.index('nullio: ')
+		off += 8 # Skip over "nullio: "
+		rd_nullio = value[off]
+		params += ",rd_nullio=" + rd_nullio
+	except ValueError:
+		pass
+
+	return params
