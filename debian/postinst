@@ -9,7 +9,7 @@ str = get_python_lib()
 if re.search("python2.6", str):
        print str.replace("/usr","/usr/local")
 else:
-       print str'
+       print str.replace("/usr","/usr/local")'
 `
 if [ ! -h /usr/sbin/tcm_node ]; then
 	chmod a+x $INSTALL_PATH/tcm_node.py;
