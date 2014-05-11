@@ -2,7 +2,7 @@
 
 **Note: lio-utils are deprecated and have been superseded by targetcli**
 
-**Please see https://github.com/Datera/targetcli **
+**Please see https://github.com/Datera/targetcli for more information**
 
 LIO-utils is a Python library that provides a simple low-level configuration
 tool set for the LIO Linux SCSI Target. LIO-utils use the configFS kernel API
