@@ -30,5 +30,5 @@ http://dir.gmane.org/gmane.linux.scsi.target.devel
 LIO-utils was developed by Datera, Inc.
 http://www.datera.io
 
-Original author: Nicholas Bellinger <nab@datera.io>
-Current Maintainer: Jerome Martin <jxm@netiant.com>
+* Original author: Nicholas Bellinger <nab@datera.io>
+* Current Maintainer: Jerome Martin <jxm@netiant.com>
