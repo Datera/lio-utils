@@ -234,6 +234,8 @@ def fabric_configfs_dump_all():
 		# FIXME: currently using lio_dump --stdout
 		if fabric_name == "iscsi":
 			continue
+		if fabric_name == "dbroot":
+			continue
 
 		fabric_root = target_root + fabric_name
 #		print "Using fabric_configfs_dump_all: " + fabric_name + ", " + fabric_root
